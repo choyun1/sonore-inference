@@ -1,0 +1,87 @@
+"""The cochleagram against sonore (filters and envelopes, float64) and against closed forms."""
+
+import numpy as np
+import pytest
+import sonore as so
+import torch
+
+from sonore_inference.cochleagram import Cochleagram, freq_to_erb, gammatone_response, gaussian_log_likelihood
+
+FS = 20_000
+
+
+def sonore_bank(cochleagram):
+    """sonore 0.4.0's bare gammatone bank with the same centers and bandwidths
+    (its bandwidth factor is a class constant, so a subclass sets ours)."""
+
+    class Bank(so.GammatoneFilterbank):
+        bandwidth_factor = cochleagram.bandwidth_factor
+
+    assert cochleagram.order == Bank.order
+    return Bank(cochleagram.n_channels, cochleagram.f_lo, cochleagram.f_hi, edges=False)
+
+
+def test_centers_match_bass():
+    cfs = Cochleagram().cfs
+    assert len(cfs) == 64
+    assert cfs[0] == pytest.approx(20.0) and cfs[-1] == pytest.approx(9423.0)
+    np.testing.assert_allclose(np.diff(freq_to_erb(cfs)), np.diff(freq_to_erb(cfs))[0])
+
+
+@pytest.mark.parametrize("n", [4000, 4001])
+def test_filters_match_sonore(n):
+    cochleagram = Cochleagram()
+    bank = sonore_bank(cochleagram)
+    np.testing.assert_allclose(bank.band_cfs, cochleagram.cfs, rtol=1e-12)
+    ours = gammatone_response(
+        np.fft.rfftfreq(n, 1 / FS), cochleagram.cfs, cochleagram.order, cochleagram.bandwidth_factor
+    )
+    np.testing.assert_allclose(ours, bank.response(np.fft.rfftfreq(n, 1 / FS)), rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("n", [3000, 3001])
+def test_envelopes_match_sonore(n):
+    cochleagram = Cochleagram(n_channels=16, pad=2000)
+    rng = np.random.default_rng(0)
+    sound = so.Sound(rng.standard_normal(n), FS)
+    expected = sonore_bank(cochleagram).analyze(sound, pad=2000 / FS).envelopes().data[:, :, 0].T
+    ours = cochleagram.envelopes(torch.tensor(sound.data[:, 0])).numpy()
+    np.testing.assert_allclose(ours, expected, rtol=0, atol=1e-10 * expected.max())
+
+
+def test_tone_at_a_center_reads_its_level():
+    cochleagram = Cochleagram()
+    channel = 40
+    tone = so.pure_tone(0.5, FS, cochleagram.cfs[channel]).data[:, 0] * 1e-6 * 10 ** (60 / 20)
+    levels = cochleagram(torch.as_tensor(tone)).numpy()
+    times = cochleagram.frame_times(len(tone))
+    steady = (times > 0.1) & (times < 0.4)
+    np.testing.assert_allclose(levels[channel, steady], 60, atol=0.01)
+    # channels far from the tone are at the floor
+    assert levels[0, steady].max() == 20.0
+
+
+def test_frames():
+    cochleagram = Cochleagram()
+    assert (cochleagram.frame_samples, cochleagram.hop_samples) == (500, 200)
+    levels = cochleagram(torch.zeros(2, 10_000))
+    assert levels.shape == (2, 64, (10_000 - 500) // 200 + 1)
+    assert (levels == 20).all()  # silence sits at the floor
+
+
+def test_gradients():
+    cochleagram = Cochleagram(n_channels=4, f_lo=200, f_hi=2000, pad=300, floor_db=-1000)
+    waveform = (
+        1e-3 * torch.randn(900, dtype=torch.float64, generator=torch.Generator().manual_seed(1))
+    ).requires_grad_()
+    assert torch.autograd.gradcheck(lambda x: cochleagram(x).sum(), (waveform,))
+
+
+def test_gaussian_log_likelihood():
+    observed = torch.tensor([[[30.0, 40.0]]], dtype=torch.float64)
+    predicted = torch.tensor([[[35.0, 40.0]]], dtype=torch.float64)
+    sigma = 10.0
+    expected = sum(
+        -0.5 * ((o - p) / sigma) ** 2 - np.log(sigma * np.sqrt(2 * np.pi)) for o, p in [(30, 35), (40, 40)]
+    )
+    assert gaussian_log_likelihood(observed, predicted, sigma).item() == pytest.approx(expected)
