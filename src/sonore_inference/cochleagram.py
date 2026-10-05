@@ -197,3 +197,55 @@ def gaussian_log_likelihood(
     residual = (observed - predicted) / sigma
     log_density = -0.5 * residual**2 - np.log(sigma) - 0.5 * np.log(2 * np.pi)
     return log_density.sum(dim=(-2, -1))
+
+
+@dataclass(frozen=True)
+class FFTCochleagram(Cochleagram):
+    """The cochleagram BASS used: a short-time spectrum pooled into gammatone-shaped channels.
+
+    Cusimano et al. (2024, App. A.5) compute their cochleagram with the FFT
+    approximation of Ellis (2009): a spectrogram with ``frame``-long windows
+    every ``hop``, whose magnitudes are summed with weights shaped like the
+    gammatones' magnitude responses. Each channel's resolution is then limited
+    by the window as well as by the gammatone, so channels whose gammatone is
+    narrower than the window's main lobe (low center frequencies) are wider
+    than in :class:`Cochleagram`.
+
+    Details follow Ellis's ``gammatonegram``: the FFT is ``fft_size`` points
+    (the next power of two above twice the window); magnitudes, not powers,
+    are pooled. Here the window is the same Hann window as
+    :class:`Cochleagram`, the weights are :func:`gammatone_response`'s
+    magnitudes, and each channel is scaled so a sinusoid at its center
+    frequency reads its level, as in :class:`Cochleagram`. No zero-padding is
+    needed: frames hold whole windows.
+    """
+
+    @property
+    def fft_size(self) -> int:
+        return 2 ** int(np.ceil(np.log2(2 * self.frame_samples)))
+
+    @lru_cache(maxsize=8)  # noqa: B019 (frozen dataclass)
+    def _weights(self, dtype, device) -> torch.Tensor:
+        """Channel weights over the FFT bins, shape ``(n_channels, fft_size // 2 + 1)``, calibrated."""
+        freqs = np.fft.rfftfreq(self.fft_size, 1 / self.fs)
+        weights = np.abs(gammatone_response(freqs, self.cfs, self.order, self.bandwidth_factor)).T
+        window = np.hanning(self.frame_samples)
+        t = np.arange(self.frame_samples) / self.fs
+        gains = np.empty(self.n_channels)
+        for channel, cf in enumerate(self.cfs):
+            tone = np.sqrt(2) * np.cos(2 * np.pi * cf * t)  # RMS 1
+            gains[channel] = weights[channel] @ np.abs(np.fft.rfft(window * tone, self.fft_size))
+        return torch.as_tensor(weights / gains[:, None], dtype=dtype, device=device)
+
+    def __call__(self, waveform: torch.Tensor) -> torch.Tensor:
+        """Cochleagram in dB re ``REFERENCE_RMS``, floored, shape ``(..., n_channels, n_frames)``."""
+        window = torch.hann_window(
+            self.frame_samples, periodic=False, dtype=waveform.dtype, device=waveform.device
+        )
+        frames = waveform.unfold(-1, self.frame_samples, self.hop_samples) * window  # (..., n_frames, frame)
+        spectrum = torch.fft.rfft(frames, n=self.fft_size)
+        tiny = torch.finfo(waveform.dtype).tiny
+        magnitude = (spectrum.real**2 + spectrum.imag**2 + tiny).sqrt()  # smooth at 0, for gradients
+        rms = magnitude @ self._weights(waveform.dtype, waveform.device).T  # (..., n_frames, C)
+        level_db = 20 * torch.log10(rms.clamp_min(tiny) / REFERENCE_RMS)
+        return level_db.clamp_min(self.floor_db).transpose(-1, -2)

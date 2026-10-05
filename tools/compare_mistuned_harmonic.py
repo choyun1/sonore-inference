@@ -25,7 +25,7 @@ import time
 
 import torch
 
-from sonore_inference.cochleagram import Cochleagram, gaussian_log_likelihood
+from sonore_inference.cochleagram import Cochleagram, FFTCochleagram, gaussian_log_likelihood
 from sonore_inference.evidence import log_evidence
 from sonore_inference.fit import fit
 from sonore_inference.priors import (
@@ -72,16 +72,24 @@ def main():
     parser.add_argument("--harmonic", type=int, default=3)
     parser.add_argument("--steps", type=int, default=300)
     parser.add_argument("--samples", type=int, default=128)
+    parser.add_argument(
+        "--cochleagram",
+        choices=["gammatone", "fft"],
+        default="gammatone",
+        help="gammatone filtering (default) or BASS's FFT approximation",
+    )
+    parser.add_argument("--phases", choices=["cosine", "sine"], default="cosine", help="component phases")
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
     args = parser.parse_args()
     dtype = torch.float64
-    cochleagram = Cochleagram()
+    cochleagram = {"gammatone": Cochleagram, "fft": FFTCochleagram}[args.cochleagram]()
     n_harmonics = len(mh.harmonic_numbers(args.f0))
     structure_one = log_prior_structure(["harmonic"], TOTAL)
     structure_two = log_prior_structure(["harmonic", "whistle"], TOTAL)
     print(
         f"f0 {args.f0:g} Hz, harmonic {args.harmonic} mistuned; "
-        f"{args.steps} Adam steps, {args.samples} samples"
+        f"{args.steps} Adam steps, {args.samples} samples, "
+        f"{args.cochleagram} cochleagram, {args.phases} phases"
     )
     print(f"log prior of structure: one source {structure_one:.2f}, two sources {structure_two:.2f}")
     print(
@@ -90,7 +98,7 @@ def main():
     )
     for percent in args.percents:
         start = time.perf_counter()
-        sound = mh.mistuned_harmonic_stimulus(args.f0, args.harmonic, percent)
+        sound = mh.mistuned_harmonic_stimulus(args.f0, args.harmonic, percent, phases=args.phases)
         observed = cochleagram(torch.tensor(sound.data[:, 0], dtype=dtype))
 
         def joint(render, prior, observed=observed):

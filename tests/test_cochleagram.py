@@ -5,7 +5,13 @@ import pytest
 import sonore as so
 import torch
 
-from sonore_inference.cochleagram import Cochleagram, freq_to_erb, gammatone_response, gaussian_log_likelihood
+from sonore_inference.cochleagram import (
+    Cochleagram,
+    FFTCochleagram,
+    freq_to_erb,
+    gammatone_response,
+    gaussian_log_likelihood,
+)
 
 FS = 20_000
 
@@ -89,3 +95,34 @@ def test_gaussian_log_likelihood():
         -0.5 * ((o - p) / sigma) ** 2 - np.log(sigma * np.sqrt(2 * np.pi)) for o, p in [(30, 35), (40, 40)]
     )
     assert gaussian_log_likelihood(observed, predicted, sigma).item() == pytest.approx(expected)
+
+
+def test_fft_cochleagram_reads_a_tone_at_a_center():
+    cochleagram = FFTCochleagram()
+    channel = 30
+    tone = so.pure_tone(0.5, FS, cochleagram.cfs[channel]).data[:, 0] * 1e-6 * 10 ** (60 / 20)
+    levels = cochleagram(torch.as_tensor(tone)).numpy()
+    assert levels.shape == Cochleagram()(torch.as_tensor(tone)).shape
+    times = cochleagram.frame_times(len(tone))
+    steady = (times > 0.1) & (times < 0.4)
+    np.testing.assert_allclose(levels[channel, steady], 60, atol=0.01)
+    assert cochleagram.fft_size == 1024  # Ellis: next power of two above twice the 500-sample window
+
+
+def test_fft_channels_are_wider_at_low_frequencies():
+    # a tone 40 Hz above a 104 Hz channel: far down the half-ERB gammatone,
+    # still inside the 25 ms window's main lobe
+    channel = int(np.argmin(np.abs(Cochleagram().cfs - 104)))
+    cf = Cochleagram().cfs[channel]
+    tone = torch.as_tensor(so.pure_tone(0.5, FS, cf + 40).data[:, 0] * 1e-6 * 10 ** (60 / 20))
+    gammatone = Cochleagram()(tone)[channel, 10:40].mean()
+    fft = FFTCochleagram()(tone)[channel, 10:40].mean()
+    assert fft - gammatone > 10
+
+
+def test_fft_cochleagram_gradients():
+    cochleagram = FFTCochleagram(n_channels=4, f_lo=200, f_hi=2000, floor_db=-1000, frame=0.005, hop=0.0025)
+    waveform = (
+        1e-3 * torch.randn(300, dtype=torch.float64, generator=torch.Generator().manual_seed(2))
+    ).requires_grad_()
+    assert torch.autograd.gradcheck(lambda x: cochleagram(x).sum(), (waveform,))

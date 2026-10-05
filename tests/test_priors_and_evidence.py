@@ -99,3 +99,19 @@ def test_evidence_of_a_gaussian_model():
     assert result.importance == pytest.approx(exact, abs=1e-12)
     assert result.effective_sample_size == pytest.approx(64)
     assert result.floored_eigenvalues == 0
+
+
+def test_draws_the_model_rejects_carry_no_weight():
+    # a standard normal log joint that raises, as torch.distributions does,
+    # for draws above 1: those draws get zero weight instead of stopping the run
+    def log_joint(params):
+        x = params["x"]
+        if x.item() > 1:
+            raise ValueError("outside the support")
+        return (-0.5 * x**2 - 0.5 * math.log(2 * math.pi)).sum()
+
+    mode = {"x": torch.tensor([0.0], dtype=torch.float64)}
+    result = log_evidence(log_joint, mode, n_samples=256, generator=torch.Generator().manual_seed(0))
+    assert result.laplace == pytest.approx(0.0, abs=1e-12)
+    # the kept draws carry the mass below 1, about 0.84
+    assert result.importance == pytest.approx(math.log(0.8413), abs=0.1)

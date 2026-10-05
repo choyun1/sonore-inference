@@ -92,8 +92,17 @@ def log_evidence(
         )
     else:
         draws = proposal.sample((n_samples,))
+
+    def log_weight(draw):
+        # a draw far outside the prior's support can make the model itself
+        # fail (an overflowing f0, say); it carries no weight
+        try:
+            return flat_log_joint(draw) - proposal.log_prob(draw)
+        except ValueError:
+            return torch.tensor(-math.inf, dtype=vector.dtype)
+
     with torch.no_grad():
-        log_weights = torch.stack([flat_log_joint(draw) - proposal.log_prob(draw) for draw in draws])
+        log_weights = torch.stack([log_weight(draw) for draw in draws])
     finite = torch.isfinite(log_weights)
     log_weights = torch.where(finite, log_weights, torch.full_like(log_weights, -math.inf))
     importance = (torch.logsumexp(log_weights, 0) - math.log(n_samples)).item()
