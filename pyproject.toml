@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sonore-inference"
+dynamic = ["version"]
+description = "Inferring auditory scenes by inverting a generative model of sound (analysis by synthesis)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Adrian Cho", email = "choyun1@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.26",
+]
+
+[project.urls]
+Source = "https://github.com/choyun1/sonore-inference"
+
+[project.optional-dependencies]
+# sonore makes stimuli and serves as the test oracle (design D2); the
+# differentiable core never imports it. Pinned so its output cannot change
+# under us.
+stimuli = ["sonore==0.4.0"]
+dev = ["pytest>=8", "ruff>=0.5", "sonore==0.4.0"]
+
+[tool.hatch.version]
+path = "src/sonore_inference/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sonore_inference"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff]
+line-length = 110
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "NPY"]
+ignore = ["E741"]
