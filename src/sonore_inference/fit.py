@@ -2,12 +2,12 @@
 
 A hypothesis is a function from named parameter tensors to a waveform. The
 fit maximizes the Gaussian log likelihood of the observed cochleagram with
-Adam, from a given initialization. There are no priors yet, so this is a
-maximum-likelihood fit, and the best log likelihoods of hypotheses with
+Adam, from a given initialization, optionally plus a log prior (then the
+result is the posterior mode). The best log likelihoods of hypotheses with
 different numbers of parameters are not comparable as evidence: the larger
 hypothesis can only do as well or better (App. B.1.1 of Cusimano et al.,
-2024). Turning them into a comparison needs priors and a marginal
-likelihood, which come with enumerative inference.
+2024). :mod:`sonore_inference.evidence` turns the posterior modes into
+marginal likelihoods, which are.
 """
 
 from __future__ import annotations
@@ -36,14 +36,16 @@ def fit(
     learning_rates: dict[str, float],
     steps: int = 300,
     sigma: float = 10.0,
+    log_prior: Callable[[dict[str, torch.Tensor]], torch.Tensor] | None = None,
 ) -> FitResult:
     """Maximize ``log p(observed | render(params))`` over ``params`` with Adam.
 
     ``init`` gives each parameter's starting value and ``learning_rates``
     its step size (Adam's steps are roughly that size in the parameter's own
     units, so dB and log-frequency parameters want different ones). Returns
-    the parameters with the best log likelihood seen, which is evaluated
-    before every step.
+    the parameters with the best objective seen, which is evaluated before
+    every step. With ``log_prior``, the objective is the log likelihood plus
+    the log prior, and ``log_likelihood`` in the result holds that sum.
     """
     params = {name: value.detach().clone().requires_grad_() for name, value in init.items()}
     optimizer = torch.optim.Adam([{"params": [params[name]], "lr": learning_rates[name]} for name in params])
@@ -51,6 +53,8 @@ def fit(
     for _ in range(steps + 1):
         optimizer.zero_grad()
         log_likelihood = gaussian_log_likelihood(observed, cochleagram(render(params)), sigma)
+        if log_prior is not None:
+            log_likelihood = log_likelihood + log_prior(params)
         value = log_likelihood.item()
         best.history.append(value)
         if value > best.log_likelihood:
