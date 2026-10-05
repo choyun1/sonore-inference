@@ -32,8 +32,8 @@ Source = "https://github.com/choyun1/sonore-inference"
 # sonore makes stimuli and serves as the test oracle (design D2); the
 # differentiable core never imports it. Pinned so its output cannot change
 # under us.
-stimuli = ["sonore==0.4.0"]
-dev = ["pytest>=8", "ruff>=0.5", "sonore==0.4.0"]
+stimuli = ["sonore==0.5.0"]
+dev = ["pytest>=8", "ruff>=0.5", "sonore==0.5.0"]
 
 [tool.hatch.version]
 path = "src/sonore_inference/__init__.py"
