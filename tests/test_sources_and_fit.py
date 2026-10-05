@@ -6,7 +6,7 @@ import torch
 
 from sonore_inference.cochleagram import Cochleagram
 from sonore_inference.fit import fit
-from sonore_inference.sources import harmonic_tone, whistle
+from sonore_inference.sources import harmonic_tone, whistle, whistle_event
 from sonore_inference.stimuli import mistuned_harmonic_stimulus
 
 FS = 20_000
@@ -59,3 +59,33 @@ def test_fit_recovers_f0_and_level():
     assert result.params["log_f0"].exp().item() == pytest.approx(200.0, abs=0.5)
     np.testing.assert_allclose(result.params["levels_db"].numpy(), 60.0, atol=1.0)
     assert result.log_likelihood > result.history[0]
+
+
+def test_whistle_event_matches_whistle_at_whole_samples():
+    freq, level = torch.tensor(640.0, dtype=torch.float64), torch.tensor(60.0, dtype=torch.float64)
+    timing = dict(fs=20_000, total_duration=0.5, ramp=0.01)
+    given = whistle(freq, level, onset=0.0731, duration=0.2, **timing)
+    inferred = whistle_event(
+        freq,
+        level,
+        torch.tensor(0.0731, dtype=torch.float64),
+        torch.tensor(0.2, dtype=torch.float64),
+        **timing,
+    )
+    np.testing.assert_allclose(inferred.numpy(), given.numpy(), atol=1e-12 * given.abs().max().item())
+
+
+def test_whistle_event_timing_has_gradients():
+    onset = torch.tensor(0.1, dtype=torch.float64, requires_grad=True)
+    duration = torch.tensor(0.2, dtype=torch.float64, requires_grad=True)
+    sound = whistle_event(
+        torch.tensor(500.0, dtype=torch.float64),
+        torch.tensor(60.0, dtype=torch.float64),
+        onset,
+        duration,
+        fs=20_000,
+        total_duration=0.5,
+        ramp=0.01,
+    )
+    sound.pow(2).sum().backward()
+    assert onset.grad.abs() > 0 and duration.grad.abs() > 0

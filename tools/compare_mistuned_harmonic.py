@@ -29,17 +29,26 @@ from sonore_inference.cochleagram import Cochleagram, FFTCochleagram, gaussian_l
 from sonore_inference.evidence import log_evidence
 from sonore_inference.fit import fit
 from sonore_inference.priors import (
+    log_prior_event_timing,
     log_prior_level,
     log_prior_log_frequency,
     log_prior_spectrum,
     log_prior_structure,
 )
-from sonore_inference.sources import harmonic_tone, whistle
+from sonore_inference.sources import harmonic_tone, whistle, whistle_event
 from sonore_inference.stimuli import mistuned_harmonic as mh
 
 TOTAL = mh.DURATION + 2 * mh.PADDING
 TIMING = dict(fs=mh.FS, onset=mh.PADDING, duration=mh.DURATION, total_duration=TOTAL, ramp=mh.RAMP)
-RATES = {"log_f0": 1e-3, "amp_db": 0.5, "spectrum_db": 0.5, "log_whistle_freq": 1e-3, "whistle_db": 0.5}
+RATES = {
+    "log_f0": 1e-3,
+    "amp_db": 0.5,
+    "spectrum_db": 0.5,
+    "log_whistle_freq": 1e-3,
+    "whistle_db": 0.5,
+    "whistle_onset": 2e-4,
+    "whistle_log_duration": 1e-3,
+}
 
 
 def one_source(params):
@@ -66,6 +75,25 @@ def prior_two(params):
     )
 
 
+def two_sources_timed(params):
+    """H2 with the whistle's onset and duration inferred (BASS infers every event's timing)."""
+    return one_source(params) + whistle_event(
+        params["log_whistle_freq"].exp(),
+        params["whistle_db"],
+        params["whistle_onset"],
+        params["whistle_log_duration"].exp(),
+        fs=mh.FS,
+        total_duration=TOTAL,
+        ramp=mh.RAMP,
+    )
+
+
+def prior_two_timed(params):
+    return prior_two(params) + log_prior_event_timing(
+        params["whistle_onset"], params["whistle_log_duration"], TOTAL
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--f0", type=float, default=200.0)
@@ -75,13 +103,21 @@ def main():
     parser.add_argument(
         "--cochleagram",
         choices=["gammatone", "fft"],
-        default="gammatone",
-        help="gammatone filtering (default) or BASS's FFT approximation",
+        default="fft",
+        help="BASS's FFT approximation (default) or gammatone filtering",
+    )
+    parser.add_argument(
+        "--whistle-timing",
+        choices=["given", "inferred"],
+        default="given",
+        help="whether H2's whistle has the stimulus's timing or infers its onset and duration",
     )
     parser.add_argument("--phases", choices=["cosine", "sine"], default="cosine", help="component phases")
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
     args = parser.parse_args()
     dtype = torch.float64
+    timed = args.whistle_timing == "inferred"
+    render_two, prior_of_two = (two_sources_timed, prior_two_timed) if timed else (two_sources, prior_two)
     cochleagram = {"gammatone": Cochleagram, "fft": FFTCochleagram}[args.cochleagram]()
     n_harmonics = len(mh.harmonic_numbers(args.f0))
     structure_one = log_prior_structure(["harmonic"], TOTAL)
@@ -89,7 +125,7 @@ def main():
     print(
         f"f0 {args.f0:g} Hz, harmonic {args.harmonic} mistuned; "
         f"{args.steps} Adam steps, {args.samples} samples, "
-        f"{args.cochleagram} cochleagram, {args.phases} phases"
+        f"{args.cochleagram} cochleagram, {args.phases} phases, whistle timing {args.whistle_timing}"
     )
     print(f"log prior of structure: one source {structure_one:.2f}, two sources {structure_two:.2f}")
     print(
@@ -130,14 +166,19 @@ def main():
                 "log_whistle_freq": torch.tensor(math.log(mistuned_freq), dtype=dtype),
                 "whistle_db": torch.tensor(whistle_db, dtype=dtype),
             }
+            if timed:
+                init |= {
+                    "whistle_onset": torch.tensor(mh.PADDING, dtype=dtype),
+                    "whistle_log_duration": torch.tensor(math.log(mh.DURATION), dtype=dtype),
+                }
             result = fit(
-                two_sources,
+                render_two,
                 init,
                 observed,
                 cochleagram,
                 learning_rates=RATES,
                 steps=args.steps,
-                log_prior=prior_two,
+                log_prior=prior_of_two,
             )
             if h2 is None or result.log_likelihood > h2.log_likelihood:
                 h2 = result
@@ -146,7 +187,7 @@ def main():
             joint(one_source, prior_one), h1.params, n_samples=args.samples, generator=generator
         )
         e2 = log_evidence(
-            joint(two_sources, prior_two), h2.params, n_samples=args.samples, generator=generator
+            joint(render_two, prior_of_two), h2.params, n_samples=args.samples, generator=generator
         )
         odds_laplace = e2.laplace + structure_two - e1.laplace - structure_one
         odds_is = e2.importance + structure_two - e1.importance - structure_one

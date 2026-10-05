@@ -295,6 +295,13 @@ to BASS's values (20 dB, σ = 10) so results stay comparable in kind. Which
 second representation to add is decided after milestone (b) shows where (B)
 fails.
 
+**Update 2026-10-05.** Both are implemented: `Cochleagram` (B) and
+`FFTCochleagram` (A, BASS's FFT approximation, PR #11). Below about 600 Hz
+(A)'s channels are 2 to 3.6 times wider than half-ERB gammatones, and with it
+the mistuned-harmonic thresholds move most of the way to the paper's. Cho
+chose (A) as the default for reproducing the paper's results; (B) stays
+available.
+
 ### D5. Inference method
 
 **Options.** Point estimates by gradient; stochastic variational inference as

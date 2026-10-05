@@ -97,3 +97,31 @@ def log_prior_structure(source_types: list[str], duration: float) -> float:
     log_types = -n * math.log(N_SOURCE_TYPES)
     log_one_event_each = n * math.log(EVENTS_GEOMETRIC_P)
     return log_poisson + log_truncation + log_orders + log_types + log_one_event_each
+
+
+TIMING_NORMAL_GAMMA = dict(mu=-1.0, lam=0.5, alpha=2.5, beta=1.0)
+
+
+def log_prior_event_timing(
+    onset: torch.Tensor, log_duration: torch.Tensor, scene_duration: float
+) -> torch.Tensor:
+    """Log prior of a source's first (here only) event: its onset and its log duration [s].
+
+    The onset is uniform over the scene [App. A.2]. The duration is
+    log-normal with mean and precision drawn from the normal-gamma source
+    prior of Table A.1 (mu0 -1, lambda0 0.5, alpha0 2.5, beta0 1); integrating
+    those out leaves a Student-t on the log duration with 2 alpha0 degrees of
+    freedom, location mu0 and squared scale beta0 (lambda0 + 1) / (alpha0 lambda0).
+    """
+    p = TIMING_NORMAL_GAMMA
+    scale = math.sqrt(p["beta"] * (p["lam"] + 1) / (p["alpha"] * p["lam"]))
+    student = torch.distributions.StudentT(
+        torch.tensor(2 * p["alpha"], dtype=log_duration.dtype),
+        torch.tensor(p["mu"], dtype=log_duration.dtype),
+        torch.tensor(scale, dtype=log_duration.dtype),
+    )
+    inside = (onset >= 0) & (onset <= scene_duration)
+    log_onset = torch.where(
+        inside, torch.full_like(onset, -math.log(scene_duration)), torch.full_like(onset, -math.inf)
+    )
+    return log_onset + student.log_prob(log_duration)
