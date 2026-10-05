@@ -11,14 +11,18 @@ FS = 20_000
 
 
 def sonore_bank(cochleagram):
-    """sonore 0.4.0's bare gammatone bank with the same centers and bandwidths
-    (its bandwidth factor is a class constant, so a subclass sets ours)."""
-
-    class Bank(so.GammatoneFilterbank):
-        bandwidth_factor = cochleagram.bandwidth_factor
-
-    assert cochleagram.order == Bank.order
-    return Bank(cochleagram.n_channels, cochleagram.f_lo, cochleagram.f_hi, edges=False)
+    """sonore's bare gammatone bank with the same centers and bandwidths.
+    sonore's knots include one point beyond each end, where its edge filters
+    would take over; with edges=False those points only fix the spacing."""
+    erbs = np.linspace(freq_to_erb(cochleagram.f_lo), freq_to_erb(cochleagram.f_hi), cochleagram.n_channels)
+    step = erbs[1] - erbs[0]
+    knots = np.concatenate([[erbs[0] - step], erbs, [erbs[-1] + step]])
+    return so.gammatone_filterbank(
+        centers=so.erb_to_freq(knots),
+        order=cochleagram.order,
+        bandwidth_factor=cochleagram.bandwidth_factor,
+        edges=False,
+    )
 
 
 def test_centers_match_bass():
