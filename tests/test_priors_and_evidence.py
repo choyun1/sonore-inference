@@ -9,6 +9,7 @@ import torch
 from sonore_inference.cochleagram import erb_to_freq, freq_to_erb
 from sonore_inference.evidence import log_evidence
 from sonore_inference.priors import (
+    log_prior_event_timing,
     log_prior_level,
     log_prior_log_frequency,
     log_prior_spectrum,
@@ -115,3 +116,35 @@ def test_draws_the_model_rejects_carry_no_weight():
     assert result.laplace == pytest.approx(0.0, abs=1e-12)
     # the kept draws carry the mass below 1, about 0.84
     assert result.importance == pytest.approx(math.log(0.8413), abs=0.1)
+
+
+def test_event_timing_prior_integrates_to_one():
+    scene = 0.5
+    onsets = torch.linspace(-0.1, 0.6, 7001, dtype=torch.float64)
+    log_durations = torch.linspace(-60, 60, 240_001, dtype=torch.float64)
+    on = torch.trapezoid(
+        log_prior_event_timing(onsets, torch.tensor(-1.0, dtype=torch.float64), scene).exp(), onsets
+    )
+    # the onset part alone integrates to the duration part's density at -1
+    zero = torch.zeros((), dtype=torch.float64)
+    duration_density = (
+        log_prior_event_timing(zero, torch.tensor(-1.0, dtype=torch.float64), scene).exp() * scene
+    )
+    assert on.item() == pytest.approx(duration_density.item(), rel=1e-3)
+    total = torch.trapezoid(
+        log_prior_event_timing(torch.zeros_like(log_durations), log_durations, scene).exp(), log_durations
+    )
+    assert total.item() * scene == pytest.approx(1.0, abs=2e-3)  # Student-t tails decay slowly
+
+
+def test_event_timing_prior_is_the_normal_gamma_marginal():
+    # draw (mu, lambda) from the normal-gamma, then log durations; compare quantiles
+    rng = np.random.default_rng(0)
+    precision = rng.gamma(2.5, 1 / 1.0, 400_000)
+    mean = rng.normal(-1.0, 1 / np.sqrt(0.5 * precision))
+    draws = rng.normal(mean, 1 / np.sqrt(precision))
+    grid = torch.linspace(-12, 10, 44_001, dtype=torch.float64)
+    density = log_prior_event_timing(torch.zeros_like(grid), grid, 1.0).exp().numpy()
+    cdf = np.cumsum(density) * (grid[1] - grid[0]).item()
+    for q in (0.1, 0.5, 0.9):
+        assert np.interp(q, cdf, grid.numpy()) == pytest.approx(np.quantile(draws, q), abs=0.02)

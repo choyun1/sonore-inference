@@ -85,3 +85,33 @@ def whistle(
         total_duration=total_duration,
         ramp=ramp,
     )
+
+
+def whistle_event(
+    freq: torch.Tensor,
+    level_db: torch.Tensor,
+    onset: torch.Tensor,
+    duration: torch.Tensor,
+    *,
+    fs: float,
+    total_duration: float,
+    ramp: float,
+) -> torch.Tensor:
+    """A whistle whose ``onset`` and ``duration`` [s] are tensors, so they can be inferred.
+
+    The gate is the same raised-cosine ramp as :func:`ramp_gain`, written as a
+    continuous function of time, so at an onset and duration of whole samples
+    this equals :func:`whistle`; between samples it moves smoothly. The tone's
+    phase starts at the onset, as in :func:`whistle`.
+    """
+    dtype, device = level_db.dtype, level_db.device
+    n = torch.arange(round(total_duration * fs), dtype=dtype, device=device)
+    midpoints = (n + 0.5) / fs  # where sonore samples its ramps
+    offset = onset + duration
+
+    def rise(seconds):
+        return (1 - torch.cos(math.pi * (seconds / ramp).clamp(0, 1))) / 2
+
+    gate = rise(midpoints - onset) * rise(offset - midpoints)
+    amplitude = math.sqrt(2) * REFERENCE_RMS * 10 ** (level_db / 20)
+    return amplitude * gate * torch.cos(2 * math.pi * freq * (n / fs - onset))
