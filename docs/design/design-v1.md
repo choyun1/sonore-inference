@@ -387,9 +387,12 @@ Cho accepted D1 to D8 as recommended. Two answers needed detail:
 - **D3:** milestone (a), the three stimuli, then (b‴), two simultaneous notes,
   which Cho singled out as the simplest new problem. (b) and (b″) share its
   renderer and follow from it.
-- **D6:** compute is a personal laptop and a PC, no cluster. Everything up to
-  and including (b‴) is sized for CPU, and seconds per iteration are measured
-  by a `tools/` script before anything larger is planned.
+- **D6:** compute is a personal laptop (CPU only) and a Windows 10 PC with an
+  NVIDIA GPU, no cluster. Everything up to and including (b‴) is sized for
+  CPU; the GPU is an optional `device` argument, never required. The code
+  stays OS-independent (no SLURM, no POSIX-only paths) so it runs on the
+  Windows PC. Seconds per iteration on both machines are measured by a
+  `tools/` script before anything larger is planned.
 
 ## 5a. The questions, short form (as put to Cho)
 
