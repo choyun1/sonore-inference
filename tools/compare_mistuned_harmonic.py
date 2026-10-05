@@ -13,8 +13,11 @@ importance sampling (``sonore_inference.evidence``). Adding the log prior of
 each hypothesis's structure (number and types of sources) gives the log
 posterior odds of two sources over one. Positive means two sources.
 
-Everything runs in float64. The number of harmonics, the onset and the
-duration are given, not inferred.
+Everything runs in float64. The number of harmonics is given. By default
+the sources' onsets and durations are given and their frequencies and levels
+constant; ``--whistle-timing inferred``, ``--trajectories`` and
+``--harmonic-timing inferred`` bring in the corresponding parts of BASS's
+sources, and ``--cochleagram fft-bass-gain`` BASS's uncalibrated levels.
 
     python tools/compare_mistuned_harmonic.py --f0 200 --harmonic 3
 """
@@ -29,13 +32,17 @@ from sonore_inference.cochleagram import Cochleagram, FFTCochleagram, gaussian_l
 from sonore_inference.evidence import log_evidence
 from sonore_inference.fit import fit
 from sonore_inference.priors import (
+    F0_TRAJECTORY,
+    GRID_STEP,
+    HARMONIC_LEVEL_TRAJECTORY,
+    WHISTLE_LEVEL_TRAJECTORY,
     log_prior_event_timing,
     log_prior_level,
     log_prior_log_frequency,
     log_prior_spectrum,
     log_prior_structure,
 )
-from sonore_inference.sources import harmonic_tone, whistle, whistle_event
+from sonore_inference.sources import harmonic_tone, trajectory_event, whistle, whistle_event
 from sonore_inference.stimuli import mistuned_harmonic as mh
 
 TOTAL = mh.DURATION + 2 * mh.PADDING
@@ -48,7 +55,27 @@ RATES = {
     "whistle_db": 0.5,
     "whistle_onset": 2e-4,
     "whistle_log_duration": 1e-3,
+    # --trajectories: means in ERB number and dB, whitened deviations (unit prior)
+    "f0_mean": 5e-3,
+    "f0_z": 1e-4,
+    "level_mean": 0.5,
+    "level_z": 1e-2,
+    "harmonic_onset": 2e-4,
+    "harmonic_log_duration": 1e-3,
+    "whistle_freq_mean": 5e-3,
+    "whistle_freq_z": 1e-4,
+    "whistle_level_mean": 0.5,
+    "whistle_level_z": 5e-2,
 }
+N_GRID = round(TOTAL / GRID_STEP) + 1
+
+
+def erb_to_hz(erb):
+    return 24.7 * 9.265 * torch.expm1(erb / 9.265)
+
+
+def hz_to_erb(freq):
+    return 9.265 * math.log1p(freq / (24.7 * 9.265))
 
 
 def one_source(params):
@@ -94,6 +121,73 @@ def prior_two_timed(params):
     )
 
 
+def harmonic_with_trajectories(params):
+    """A harmonic source whose f0 and level follow Gaussian-process trajectories (BASS's harmonic source)."""
+    f0 = erb_to_hz(F0_TRAJECTORY.trajectory(params["f0_mean"], params["f0_z"]))
+    level = HARMONIC_LEVEL_TRAJECTORY.trajectory(params["level_mean"], params["level_z"])
+    numbers = torch.arange(1, params["spectrum_db"].shape[-1] + 1, dtype=f0.dtype)
+    if "harmonic_onset" in params:
+        onset, duration = params["harmonic_onset"], params["harmonic_log_duration"].exp()
+    else:
+        onset, duration = mh.PADDING, mh.DURATION
+    return trajectory_event(
+        numbers[:, None] * f0,
+        level + params["spectrum_db"][:, None],
+        onset,
+        duration,
+        grid_step=GRID_STEP,
+        fs=mh.FS,
+        total_duration=TOTAL,
+        ramp=mh.RAMP,
+    )
+
+
+def prior_harmonic_with_trajectories(params):
+    log_prior = (
+        F0_TRAJECTORY.log_prior(params["f0_mean"], params["f0_z"])
+        + HARMONIC_LEVEL_TRAJECTORY.log_prior(params["level_mean"], params["level_z"])
+        + log_prior_spectrum(params["spectrum_db"], erb_to_hz(params["f0_mean"]))
+    )
+    if "harmonic_onset" in params:
+        log_prior = log_prior + log_prior_event_timing(
+            params["harmonic_onset"], params["harmonic_log_duration"], TOTAL
+        )
+    return log_prior
+
+
+def two_sources_with_trajectories(params):
+    """H2 with every trajectory: the whistle's frequency and level follow Gaussian processes too."""
+    freq = erb_to_hz(F0_TRAJECTORY.trajectory(params["whistle_freq_mean"], params["whistle_freq_z"]))
+    level = WHISTLE_LEVEL_TRAJECTORY.trajectory(params["whistle_level_mean"], params["whistle_level_z"])
+    if "whistle_onset" in params:
+        onset, duration = params["whistle_onset"], params["whistle_log_duration"].exp()
+    else:
+        onset, duration = mh.PADDING, mh.DURATION
+    return harmonic_with_trajectories(params) + trajectory_event(
+        freq[None],
+        level[None],
+        onset,
+        duration,
+        grid_step=GRID_STEP,
+        fs=mh.FS,
+        total_duration=TOTAL,
+        ramp=mh.RAMP,
+    )
+
+
+def prior_two_with_trajectories(params):
+    log_prior = (
+        prior_harmonic_with_trajectories(params)
+        + F0_TRAJECTORY.log_prior(params["whistle_freq_mean"], params["whistle_freq_z"])
+        + WHISTLE_LEVEL_TRAJECTORY.log_prior(params["whistle_level_mean"], params["whistle_level_z"])
+    )
+    if "whistle_onset" in params:
+        log_prior = log_prior + log_prior_event_timing(
+            params["whistle_onset"], params["whistle_log_duration"], TOTAL
+        )
+    return log_prior
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--f0", type=float, default=200.0)
@@ -102,9 +196,9 @@ def main():
     parser.add_argument("--samples", type=int, default=128)
     parser.add_argument(
         "--cochleagram",
-        choices=["gammatone", "fft"],
+        choices=["gammatone", "fft", "fft-bass-gain"],
         default="fft",
-        help="BASS's FFT approximation (default) or gammatone filtering",
+        help="BASS's FFT approximation (default), with BASS's uncalibrated gain, or gammatone filtering",
     )
     parser.add_argument(
         "--whistle-timing",
@@ -112,13 +206,32 @@ def main():
         default="given",
         help="whether H2's whistle has the stimulus's timing or infers its onset and duration",
     )
+    parser.add_argument(
+        "--trajectories",
+        action="store_true",
+        help="give f0, whistle frequency and both levels Gaussian-process trajectories, as BASS does",
+    )
+    parser.add_argument(
+        "--harmonic-timing",
+        choices=["given", "inferred"],
+        default="given",
+        help="with --trajectories, whether the harmonic source infers its onset and duration",
+    )
     parser.add_argument("--phases", choices=["cosine", "sine"], default="cosine", help="component phases")
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
     args = parser.parse_args()
     dtype = torch.float64
     timed = args.whistle_timing == "inferred"
+    render_one, prior_of_one = one_source, prior_one
     render_two, prior_of_two = (two_sources_timed, prior_two_timed) if timed else (two_sources, prior_two)
-    cochleagram = {"gammatone": Cochleagram, "fft": FFTCochleagram}[args.cochleagram]()
+    if args.trajectories:
+        render_one, prior_of_one = harmonic_with_trajectories, prior_harmonic_with_trajectories
+        render_two, prior_of_two = two_sources_with_trajectories, prior_two_with_trajectories
+    cochleagram = {
+        "gammatone": Cochleagram(),
+        "fft": FFTCochleagram(),
+        "fft-bass-gain": FFTCochleagram(bass_gain=True),
+    }[args.cochleagram]
     n_harmonics = len(mh.harmonic_numbers(args.f0))
     structure_one = log_prior_structure(["harmonic"], TOTAL)
     structure_two = log_prior_structure(["harmonic", "whistle"], TOTAL)
@@ -126,6 +239,7 @@ def main():
         f"f0 {args.f0:g} Hz, harmonic {args.harmonic} mistuned; "
         f"{args.steps} Adam steps, {args.samples} samples, "
         f"{args.cochleagram} cochleagram, {args.phases} phases, whistle timing {args.whistle_timing}"
+        + (f", trajectories, harmonic timing {args.harmonic_timing}" if args.trajectories else "")
     )
     print(f"log prior of structure: one source {structure_one:.2f}, two sources {structure_two:.2f}")
     print(
@@ -142,30 +256,53 @@ def main():
                 gaussian_log_likelihood(observed, cochleagram(render(params))) + prior(params)
             )
 
-        base = {
-            "log_f0": torch.tensor(math.log(args.f0), dtype=dtype),
-            "amp_db": torch.tensor(mh.COMPONENT_LEVEL_DB, dtype=dtype),
-            "spectrum_db": torch.zeros(n_harmonics, dtype=dtype),
-        }
+        if args.trajectories:
+            base = {
+                "f0_mean": torch.tensor(hz_to_erb(args.f0), dtype=dtype),
+                "f0_z": torch.zeros(N_GRID, dtype=dtype),
+                "level_mean": torch.tensor(mh.COMPONENT_LEVEL_DB, dtype=dtype),
+                "level_z": torch.zeros(N_GRID, dtype=dtype),
+                "spectrum_db": torch.zeros(n_harmonics, dtype=dtype),
+            }
+            if args.harmonic_timing == "inferred":
+                base |= {
+                    "harmonic_onset": torch.tensor(mh.PADDING, dtype=dtype),
+                    "harmonic_log_duration": torch.tensor(math.log(mh.DURATION), dtype=dtype),
+                }
+        else:
+            base = {
+                "log_f0": torch.tensor(math.log(args.f0), dtype=dtype),
+                "amp_db": torch.tensor(mh.COMPONENT_LEVEL_DB, dtype=dtype),
+                "spectrum_db": torch.zeros(n_harmonics, dtype=dtype),
+            }
         h1 = fit(
-            one_source,
+            render_one,
             base,
             observed,
             cochleagram,
             learning_rates=RATES,
             steps=args.steps,
-            log_prior=prior_one,
+            log_prior=prior_of_one,
         )
         mistuned_freq = args.harmonic * args.f0 + args.f0 * percent / 100
         h2 = None
         for drop_db, whistle_db in [(30.0, 60.0), (6.0, 50.0)]:
             spectrum = base["spectrum_db"].clone()
             spectrum[args.harmonic - 1] -= drop_db
-            init = base | {
-                "spectrum_db": spectrum,
-                "log_whistle_freq": torch.tensor(math.log(mistuned_freq), dtype=dtype),
-                "whistle_db": torch.tensor(whistle_db, dtype=dtype),
-            }
+            if args.trajectories:
+                init = base | {
+                    "spectrum_db": spectrum,
+                    "whistle_freq_mean": torch.tensor(hz_to_erb(mistuned_freq), dtype=dtype),
+                    "whistle_freq_z": torch.zeros(N_GRID, dtype=dtype),
+                    "whistle_level_mean": torch.tensor(whistle_db, dtype=dtype),
+                    "whistle_level_z": torch.zeros(N_GRID, dtype=dtype),
+                }
+            else:
+                init = base | {
+                    "spectrum_db": spectrum,
+                    "log_whistle_freq": torch.tensor(math.log(mistuned_freq), dtype=dtype),
+                    "whistle_db": torch.tensor(whistle_db, dtype=dtype),
+                }
             if timed:
                 init |= {
                     "whistle_onset": torch.tensor(mh.PADDING, dtype=dtype),
@@ -184,7 +321,7 @@ def main():
                 h2 = result
         generator = torch.Generator().manual_seed(0)
         e1 = log_evidence(
-            joint(one_source, prior_one), h1.params, n_samples=args.samples, generator=generator
+            joint(render_one, prior_of_one), h1.params, n_samples=args.samples, generator=generator
         )
         e2 = log_evidence(
             joint(render_two, prior_of_two), h2.params, n_samples=args.samples, generator=generator

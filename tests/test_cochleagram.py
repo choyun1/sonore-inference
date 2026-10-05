@@ -126,3 +126,16 @@ def test_fft_cochleagram_gradients():
         1e-3 * torch.randn(300, dtype=torch.float64, generator=torch.Generator().manual_seed(2))
     ).requires_grad_()
     assert torch.autograd.gradcheck(lambda x: cochleagram(x).sum(), (waveform,))
+
+
+def test_bass_gain_is_a_fixed_offset_per_channel_and_largest_at_low_frequencies():
+    calibrated, bass = FFTCochleagram(floor_db=-1000), FFTCochleagram(floor_db=-1000, bass_gain=True)
+    noise = torch.randn(10_000, dtype=torch.float64, generator=torch.Generator().manual_seed(3))
+    tone = torch.as_tensor(so.pure_tone(0.5, FS, 1000.0).data[:, 0] * 1e-3)
+    offsets = [(calibrated(x) - bass(x))[:, 5:40] for x in (1e-3 * noise, tone)]
+    np.testing.assert_allclose(offsets[0], offsets[0][:, :1].expand_as(offsets[0]), atol=1e-9)
+    np.testing.assert_allclose(offsets[0], offsets[1], atol=1e-9)
+    per_channel = offsets[0][:, 0].numpy()
+    low, high = np.argmin(np.abs(bass.cfs - 104)), np.argmin(np.abs(bass.cfs - 3165))
+    # BASS's own gammatonegram, run on 60 dB tones, read about 47 dB at 104 Hz and 56 dB at 3165 Hz
+    np.testing.assert_allclose(per_channel[[low, high]], [12.9, 3.7], atol=0.5)

@@ -148,3 +148,22 @@ def test_event_timing_prior_is_the_normal_gamma_marginal():
     cdf = np.cumsum(density) * (grid[1] - grid[0]).item()
     for q in (0.1, 0.5, 0.9):
         assert np.interp(q, cdf, grid.numpy()) == pytest.approx(np.quantile(draws, q), abs=0.02)
+
+
+def test_trajectory_prior_covariance_and_density():
+    from sonore_inference.priors import GRID_STEP, TrajectoryPrior
+
+    prior = TrajectoryPrior(sigma=2.0, lengthscale=0.1, beta=0.5, epsilon=0.1, mean_range=(0.0, 10.0))
+    lower = prior.cholesky(5)
+    covariance = lower @ lower.T
+    expected_02 = 2.0**2 * math.exp(-0.5 * (2 * GRID_STEP / 0.1) ** 2) + 0.5**2
+    assert covariance[0, 2].item() == pytest.approx(expected_02)
+    assert covariance[1, 1].item() == pytest.approx(4.0 + 0.25 + 0.01 + 2.0 * 0.001)
+    mean, z = torch.tensor(3.0, dtype=torch.float64), torch.randn(5, dtype=torch.float64)
+    torch.testing.assert_close(
+        prior.trajectory(mean, torch.zeros(5, dtype=torch.float64)),
+        torch.full((5,), 3.0, dtype=torch.float64),
+    )
+    expected = -math.log(10.0) + torch.distributions.Normal(0.0, 1.0).log_prob(z).sum()
+    assert prior.log_prior(mean, z).item() == pytest.approx(expected.item())
+    assert prior.log_prior(torch.tensor(11.0, dtype=torch.float64), z).item() == -math.inf

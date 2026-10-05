@@ -218,7 +218,15 @@ class FFTCochleagram(Cochleagram):
     magnitudes, and each channel is scaled so a sinusoid at its center
     frequency reads its level, as in :class:`Cochleagram`. No zero-padding is
     needed: frames hold whole windows.
+
+    With ``bass_gain=True`` the channels are not calibrated: as in BASS's
+    ``gammatonegram``, the pooled magnitudes are divided by ``fft_size`` and
+    read in dB re ``REFERENCE_RMS`` directly, so a sinusoid reads below its
+    level, by more at low center frequencies (about 13 dB at 100 Hz, 4 dB at
+    3 kHz for the defaults), and nearer the floor.
     """
+
+    bass_gain: bool = False
 
     @property
     def fft_size(self) -> int:
@@ -229,6 +237,8 @@ class FFTCochleagram(Cochleagram):
         """Channel weights over the FFT bins, shape ``(n_channels, fft_size // 2 + 1)``, calibrated."""
         freqs = np.fft.rfftfreq(self.fft_size, 1 / self.fs)
         weights = np.abs(gammatone_response(freqs, self.cfs, self.order, self.bandwidth_factor)).T
+        if self.bass_gain:
+            return torch.as_tensor(weights / self.fft_size, dtype=dtype, device=device)
         window = np.hanning(self.frame_samples)
         t = np.arange(self.frame_samples) / self.fs
         gains = np.empty(self.n_channels)
