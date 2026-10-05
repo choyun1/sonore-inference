@@ -1,12 +1,13 @@
 """Mistuning thresholds from the output of tools/compare_mistuned_harmonic.py.
 
-For each output file (one f0 and harmonic), converts the log posterior odds
+Rows for the same f0 and harmonic are merged across files (so a finer grid
+can be run separately and added), sorted by mistuning; then it converts the log posterior odds
 of two sources over one into probabilities and applies the threshold of
 Eqn 2 (``sonore_inference.thresholds``), for the Laplace and the
 importance-sampling estimates. A threshold of 50% means two sources were
 never preferred, which the paper reports as not measurable.
 
-    python tools/mistuning_thresholds.py results/f0-*_h*.txt
+    python tools/mistuning_thresholds.py coarse/f0-*_h*.txt fine/f0-*_h*.txt
 """
 
 import argparse
@@ -31,6 +32,8 @@ def read(path):
                 percents.append(numbers[0])
                 laplace.append(numbers[7])
                 importance.append(numbers[8])
+    if f0 is None:
+        raise ValueError(f"{path} is not an output of tools/compare_mistuned_harmonic.py")
     return f0, harmonic, percents, laplace, importance
 
 
@@ -38,12 +41,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("outputs", nargs="+")
     args = parser.parse_args()
-    print("f0_hz  harmonic  threshold_laplace  threshold_is  p_two_at_max")
-    for f0, harmonic, percents, laplace, importance in sorted(read(path) for path in args.outputs):
+    conditions = {}
+    for path in args.outputs:
+        f0, harmonic, percents, laplace, importance = read(path)
+        rows = conditions.setdefault((f0, harmonic), {})
+        rows.update(zip(percents, zip(laplace, importance, strict=True), strict=True))
+    print("f0_hz  harmonic  n_mistunings  threshold_laplace  threshold_is  p_two_at_max")
+    for (f0, harmonic), rows in sorted(conditions.items()):
+        percents = sorted(rows)
+        laplace = [rows[percent][0] for percent in percents]
+        importance = [rows[percent][1] for percent in percents]
         tau_laplace = threshold(percents, probability_from_log_odds(laplace))
         tau_importance = threshold(percents, probability_from_log_odds(importance))
         p_two = probability_from_log_odds(laplace[-1])
-        print(f"{f0:5g}  {harmonic:8d}  {tau_laplace:17.1f}  {tau_importance:12.1f}  {p_two:12.3f}")
+        print(
+            f"{f0:5g}  {harmonic:8d}  {len(percents):12d}"
+            f"  {tau_laplace:17.1f}  {tau_importance:12.1f}  {p_two:12.3f}"
+        )
 
 
 if __name__ == "__main__":
