@@ -144,9 +144,9 @@ class TrajectoryPrior:
     scene; grid points outside the event are not heard, so they integrate out
     and leave the prior of the points inside it. ``sigma`` and ``lengthscale``
     are fixed at the medians of Table A.2, a simplification (the paper infers
-    them). The Gaussian process is written as ``cholesky(K) @ z`` with ``z``
-    standard normal, the parameterization that fitting and the Laplace
-    approximation see.
+    them). The latents are the mean and the deviations from it at each grid
+    point, in the trajectory's own units, so a fit's step sizes mean the same
+    along fast and slow changes.
     """
 
     sigma: float
@@ -165,17 +165,19 @@ class TrajectoryPrior:
         )
         return torch.linalg.cholesky(covariance)
 
-    def trajectory(self, mean: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-        return mean + self.cholesky(z.shape[-1], z.dtype) @ z
+    def trajectory(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
+        return mean + deviation
 
-    def log_prior(self, mean: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-        """Log density of the mean (uniform) and the whitened deviations (standard normal)."""
+    def log_prior(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
+        """Log density of the mean (uniform) and the deviations (the Gaussian process)."""
         low, high = self.mean_range
         inside = (mean >= low) & (mean <= high)
         log_mean = torch.where(
             inside, torch.full_like(mean, -math.log(high - low)), torch.full_like(mean, -math.inf)
         )
-        return log_mean - 0.5 * (z**2).sum() - 0.5 * z.numel() * math.log(2 * math.pi)
+        scale_tril = self.cholesky(deviation.shape[-1], deviation.dtype)
+        gaussian = torch.distributions.MultivariateNormal(torch.zeros_like(deviation), scale_tril=scale_tril)
+        return log_mean + gaussian.log_prob(deviation)
 
 
 # Table A.2 medians (Q2) of sigma and lengthscale; beta and epsilon as in

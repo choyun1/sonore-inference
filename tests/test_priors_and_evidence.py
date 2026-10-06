@@ -159,11 +159,10 @@ def test_trajectory_prior_covariance_and_density():
     expected_02 = 2.0**2 * math.exp(-0.5 * (2 * GRID_STEP / 0.1) ** 2) + 0.5**2
     assert covariance[0, 2].item() == pytest.approx(expected_02)
     assert covariance[1, 1].item() == pytest.approx(4.0 + 0.25 + 0.01 + 2.0 * 0.001)
-    mean, z = torch.tensor(3.0, dtype=torch.float64), torch.randn(5, dtype=torch.float64)
-    torch.testing.assert_close(
-        prior.trajectory(mean, torch.zeros(5, dtype=torch.float64)),
-        torch.full((5,), 3.0, dtype=torch.float64),
-    )
-    expected = -math.log(10.0) + torch.distributions.Normal(0.0, 1.0).log_prob(z).sum()
-    assert prior.log_prior(mean, z).item() == pytest.approx(expected.item())
-    assert prior.log_prior(torch.tensor(11.0, dtype=torch.float64), z).item() == -math.inf
+    mean, deviation = torch.tensor(3.0, dtype=torch.float64), torch.randn(5, dtype=torch.float64)
+    torch.testing.assert_close(prior.trajectory(mean, deviation), 3.0 + deviation)
+    expected = -math.log(10.0) + torch.distributions.MultivariateNormal(
+        torch.zeros(5, dtype=torch.float64), covariance_matrix=covariance
+    ).log_prob(deviation)
+    assert prior.log_prior(mean, deviation).item() == pytest.approx(expected.item())
+    assert prior.log_prior(torch.tensor(11.0, dtype=torch.float64), deviation).item() == -math.inf

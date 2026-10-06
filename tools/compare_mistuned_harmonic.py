@@ -55,17 +55,17 @@ RATES = {
     "whistle_db": 0.5,
     "whistle_onset": 2e-4,
     "whistle_log_duration": 1e-3,
-    # --trajectories: means in ERB number and dB, whitened deviations (unit prior)
+    # --trajectories: means and deviations in ERB number and dB
     "f0_mean": 5e-3,
-    "f0_z": 1e-4,
+    "f0_deviation": 2e-3,
     "level_mean": 0.5,
-    "level_z": 1e-2,
+    "level_deviation": 0.1,
     "harmonic_onset": 2e-4,
     "harmonic_log_duration": 1e-3,
     "whistle_freq_mean": 5e-3,
-    "whistle_freq_z": 1e-4,
+    "whistle_freq_deviation": 2e-3,
     "whistle_level_mean": 0.5,
-    "whistle_level_z": 5e-2,
+    "whistle_level_deviation": 0.05,
 }
 N_GRID = round(TOTAL / GRID_STEP) + 1
 
@@ -123,8 +123,8 @@ def prior_two_timed(params):
 
 def harmonic_with_trajectories(params):
     """A harmonic source whose f0 and level follow Gaussian-process trajectories (BASS's harmonic source)."""
-    f0 = erb_to_hz(F0_TRAJECTORY.trajectory(params["f0_mean"], params["f0_z"]))
-    level = HARMONIC_LEVEL_TRAJECTORY.trajectory(params["level_mean"], params["level_z"])
+    f0 = erb_to_hz(F0_TRAJECTORY.trajectory(params["f0_mean"], params["f0_deviation"]))
+    level = HARMONIC_LEVEL_TRAJECTORY.trajectory(params["level_mean"], params["level_deviation"])
     numbers = torch.arange(1, params["spectrum_db"].shape[-1] + 1, dtype=f0.dtype)
     if "harmonic_onset" in params:
         onset, duration = params["harmonic_onset"], params["harmonic_log_duration"].exp()
@@ -144,9 +144,14 @@ def harmonic_with_trajectories(params):
 
 def prior_harmonic_with_trajectories(params):
     log_prior = (
-        F0_TRAJECTORY.log_prior(params["f0_mean"], params["f0_z"])
-        + HARMONIC_LEVEL_TRAJECTORY.log_prior(params["level_mean"], params["level_z"])
-        + log_prior_spectrum(params["spectrum_db"], erb_to_hz(params["f0_mean"]))
+        F0_TRAJECTORY.log_prior(params["f0_mean"], params["f0_deviation"])
+        + HARMONIC_LEVEL_TRAJECTORY.log_prior(params["level_mean"], params["level_deviation"])
+        # at the f0 the source actually has, not the mean of its prior, which
+        # trades off against the deviations and is not seen by the likelihood
+        + log_prior_spectrum(
+            params["spectrum_db"],
+            erb_to_hz(F0_TRAJECTORY.trajectory(params["f0_mean"], params["f0_deviation"]).mean()),
+        )
     )
     if "harmonic_onset" in params:
         log_prior = log_prior + log_prior_event_timing(
@@ -157,8 +162,10 @@ def prior_harmonic_with_trajectories(params):
 
 def two_sources_with_trajectories(params):
     """H2 with every trajectory: the whistle's frequency and level follow Gaussian processes too."""
-    freq = erb_to_hz(F0_TRAJECTORY.trajectory(params["whistle_freq_mean"], params["whistle_freq_z"]))
-    level = WHISTLE_LEVEL_TRAJECTORY.trajectory(params["whistle_level_mean"], params["whistle_level_z"])
+    freq = erb_to_hz(F0_TRAJECTORY.trajectory(params["whistle_freq_mean"], params["whistle_freq_deviation"]))
+    level = WHISTLE_LEVEL_TRAJECTORY.trajectory(
+        params["whistle_level_mean"], params["whistle_level_deviation"]
+    )
     if "whistle_onset" in params:
         onset, duration = params["whistle_onset"], params["whistle_log_duration"].exp()
     else:
@@ -178,8 +185,8 @@ def two_sources_with_trajectories(params):
 def prior_two_with_trajectories(params):
     log_prior = (
         prior_harmonic_with_trajectories(params)
-        + F0_TRAJECTORY.log_prior(params["whistle_freq_mean"], params["whistle_freq_z"])
-        + WHISTLE_LEVEL_TRAJECTORY.log_prior(params["whistle_level_mean"], params["whistle_level_z"])
+        + F0_TRAJECTORY.log_prior(params["whistle_freq_mean"], params["whistle_freq_deviation"])
+        + WHISTLE_LEVEL_TRAJECTORY.log_prior(params["whistle_level_mean"], params["whistle_level_deviation"])
     )
     if "whistle_onset" in params:
         log_prior = log_prior + log_prior_event_timing(
@@ -259,9 +266,9 @@ def main():
         if args.trajectories:
             base = {
                 "f0_mean": torch.tensor(hz_to_erb(args.f0), dtype=dtype),
-                "f0_z": torch.zeros(N_GRID, dtype=dtype),
+                "f0_deviation": torch.zeros(N_GRID, dtype=dtype),
                 "level_mean": torch.tensor(mh.COMPONENT_LEVEL_DB, dtype=dtype),
-                "level_z": torch.zeros(N_GRID, dtype=dtype),
+                "level_deviation": torch.zeros(N_GRID, dtype=dtype),
                 "spectrum_db": torch.zeros(n_harmonics, dtype=dtype),
             }
             if args.harmonic_timing == "inferred":
@@ -293,9 +300,9 @@ def main():
                 init = base | {
                     "spectrum_db": spectrum,
                     "whistle_freq_mean": torch.tensor(hz_to_erb(mistuned_freq), dtype=dtype),
-                    "whistle_freq_z": torch.zeros(N_GRID, dtype=dtype),
+                    "whistle_freq_deviation": torch.zeros(N_GRID, dtype=dtype),
                     "whistle_level_mean": torch.tensor(whistle_db, dtype=dtype),
-                    "whistle_level_z": torch.zeros(N_GRID, dtype=dtype),
+                    "whistle_level_deviation": torch.zeros(N_GRID, dtype=dtype),
                 }
             else:
                 init = base | {
