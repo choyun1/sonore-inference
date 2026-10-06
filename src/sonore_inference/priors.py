@@ -20,14 +20,16 @@ level do not change over an event:
   uniform over noise, harmonic and whistle; each source's number of events
   Geometric(0.5) [Table A.1].
 
-The paper's Gaussian processes over time collapse to their means here, and
-event timing is given, not inferred, so its prior is left out of every
-hypothesis alike.
+In the functions above, the paper's Gaussian processes over time collapse
+to their means. :class:`TrajectoryPrior` restores them, for sources whose
+frequency and level follow trajectories; :func:`log_prior_event_timing` is
+the prior of an event's onset and duration, for when they are inferred.
 """
 
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import torch
 
@@ -125,3 +127,66 @@ def log_prior_event_timing(
         inside, torch.full_like(onset, -math.log(scene_duration)), torch.full_like(onset, -math.inf)
     )
     return log_onset + student.log_prob(log_duration)
+
+
+GRID_STEP = 0.01  # s, BASS's trajectory grid (config steps.t)
+
+
+@dataclass(frozen=True)
+class TrajectoryPrior:
+    """Gaussian-process prior of one excitation trajectory over time [App. A.2, Eqns A.13-A.17].
+
+    The trajectory is its mean (a latent, uniform on ``mean_range``) plus a
+    zero-mean Gaussian process on the 10 ms grid, with BASS's kernel: squared
+    exponential (``sigma``, ``lengthscale`` [s]) plus ``beta`` squared within
+    the event, plus ``epsilon`` squared and ``sigma`` times ``stability`` on
+    the diagonal. Here there is one event, and the grid covers the whole
+    scene; grid points outside the event are not heard, so they integrate out
+    and leave the prior of the points inside it. ``sigma`` and ``lengthscale``
+    are fixed at the medians of Table A.2, a simplification (the paper infers
+    them). The latents are the mean and the deviations from it at each grid
+    point, in the trajectory's own units, so a fit's step sizes mean the same
+    along fast and slow changes.
+    """
+
+    sigma: float
+    lengthscale: float
+    beta: float
+    epsilon: float
+    mean_range: tuple[float, float]
+    stability: float = 0.001
+
+    def cholesky(self, n_grid: int, dtype=torch.float64) -> torch.Tensor:
+        t = torch.arange(n_grid, dtype=dtype) * GRID_STEP
+        covariance = self.sigma**2 * torch.exp(-0.5 * ((t[:, None] - t[None, :]) / self.lengthscale) ** 2)
+        covariance = covariance + self.beta**2
+        covariance = covariance + (self.epsilon**2 + self.sigma * self.stability) * torch.eye(
+            n_grid, dtype=dtype
+        )
+        return torch.linalg.cholesky(covariance)
+
+    def trajectory(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
+        return mean + deviation
+
+    def log_prior(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
+        """Log density of the mean (uniform) and the deviations (the Gaussian process)."""
+        low, high = self.mean_range
+        inside = (mean >= low) & (mean <= high)
+        log_mean = torch.where(
+            inside, torch.full_like(mean, -math.log(high - low)), torch.full_like(mean, -math.inf)
+        )
+        scale_tril = self.cholesky(deviation.shape[-1], deviation.dtype)
+        gaussian = torch.distributions.MultivariateNormal(torch.zeros_like(deviation), scale_tril=scale_tril)
+        return log_mean + gaussian.log_prob(deviation)
+
+
+# Table A.2 medians (Q2) of sigma and lengthscale; beta and epsilon as in
+# BASS's config (full_enumerative.yaml); the f0 prior (in ERB number) is
+# shared by whistles and harmonic sources.
+F0_TRAJECTORY = TrajectoryPrior(sigma=5.9, lengthscale=2.5, beta=0.437, epsilon=0.1, mean_range=(3.0, 33.19))
+WHISTLE_LEVEL_TRAJECTORY = TrajectoryPrior(
+    sigma=1.3, lengthscale=6.9, beta=0.542, epsilon=0.1, mean_range=LEVEL_RANGE_DB
+)
+HARMONIC_LEVEL_TRAJECTORY = TrajectoryPrior(
+    sigma=7.8, lengthscale=0.18, beta=3.12, epsilon=0.5, mean_range=LEVEL_RANGE_DB
+)

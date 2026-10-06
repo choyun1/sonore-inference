@@ -302,6 +302,12 @@ the mistuned-harmonic thresholds move most of the way to the paper's. Cho
 chose (A) as the default for reproducing the paper's results; (B) stays
 available.
 
+**Update 2026-10-06.** BASS does not calibrate (A)'s channels: its pooled
+magnitudes are divided by the FFT size, so a 60 dB tone reads about 47 dB at
+100 Hz and 56 dB at 3 kHz, nearer the 20 dB floor. `FFTCochleagram` now does the same by default (within 0.6 dB of BASS's code
+per channel); Cho chose this default on 2026-10-06. `bass_gain=False` keeps
+the calibrated channels.
+
 ### D5. Inference method
 
 **Options.** Point estimates by gradient; stochastic variational inference as

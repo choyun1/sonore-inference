@@ -97,8 +97,8 @@ def test_gaussian_log_likelihood():
     assert gaussian_log_likelihood(observed, predicted, sigma).item() == pytest.approx(expected)
 
 
-def test_fft_cochleagram_reads_a_tone_at_a_center():
-    cochleagram = FFTCochleagram()
+def test_calibrated_fft_cochleagram_reads_a_tone_at_a_center():
+    cochleagram = FFTCochleagram(bass_gain=False)
     channel = 30
     tone = so.pure_tone(0.5, FS, cochleagram.cfs[channel]).data[:, 0] * 1e-6 * 10 ** (60 / 20)
     levels = cochleagram(torch.as_tensor(tone)).numpy()
@@ -116,7 +116,7 @@ def test_fft_channels_are_wider_at_low_frequencies():
     cf = Cochleagram().cfs[channel]
     tone = torch.as_tensor(so.pure_tone(0.5, FS, cf + 40).data[:, 0] * 1e-6 * 10 ** (60 / 20))
     gammatone = Cochleagram()(tone)[channel, 10:40].mean()
-    fft = FFTCochleagram()(tone)[channel, 10:40].mean()
+    fft = FFTCochleagram(bass_gain=False)(tone)[channel, 10:40].mean()
     assert fft - gammatone > 10
 
 
@@ -126,3 +126,16 @@ def test_fft_cochleagram_gradients():
         1e-3 * torch.randn(300, dtype=torch.float64, generator=torch.Generator().manual_seed(2))
     ).requires_grad_()
     assert torch.autograd.gradcheck(lambda x: cochleagram(x).sum(), (waveform,))
+
+
+def test_bass_gain_is_a_fixed_offset_per_channel_and_largest_at_low_frequencies():
+    calibrated, bass = FFTCochleagram(floor_db=-1000, bass_gain=False), FFTCochleagram(floor_db=-1000)
+    noise = torch.randn(10_000, dtype=torch.float64, generator=torch.Generator().manual_seed(3))
+    tone = torch.as_tensor(so.pure_tone(0.5, FS, 1000.0).data[:, 0] * 1e-3)
+    offsets = [(calibrated(x) - bass(x))[:, 5:40] for x in (1e-3 * noise, tone)]
+    np.testing.assert_allclose(offsets[0], offsets[0][:, :1].expand_as(offsets[0]), atol=1e-9)
+    np.testing.assert_allclose(offsets[0], offsets[1], atol=1e-9)
+    per_channel = offsets[0][:, 0].numpy()
+    low, high = np.argmin(np.abs(bass.cfs - 104)), np.argmin(np.abs(bass.cfs - 3165))
+    # BASS's own gammatonegram, run on 60 dB tones, read about 47 dB at 104 Hz and 56 dB at 3165 Hz
+    np.testing.assert_allclose(per_channel[[low, high]], [12.9, 3.7], atol=0.5)
