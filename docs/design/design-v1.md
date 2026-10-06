@@ -304,9 +304,9 @@ available.
 
 **Update 2026-10-06.** BASS does not calibrate (A)'s channels: its pooled
 magnitudes are divided by the FFT size, so a 60 dB tone reads about 47 dB at
-100 Hz and 56 dB at 3 kHz, nearer the 20 dB floor. `FFTCochleagram(bass_gain=True)`
-does the same (within 0.6 dB of BASS's code per channel); the default stays
-calibrated.
+100 Hz and 56 dB at 3 kHz, nearer the 20 dB floor. `FFTCochleagram` now does the same by default (within 0.6 dB of BASS's code
+per channel); Cho chose this default on 2026-10-06. `bass_gain=False` keeps
+the calibrated channels.
 
 ### D5. Inference method
 

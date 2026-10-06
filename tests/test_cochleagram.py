@@ -97,8 +97,8 @@ def test_gaussian_log_likelihood():
     assert gaussian_log_likelihood(observed, predicted, sigma).item() == pytest.approx(expected)
 
 
-def test_fft_cochleagram_reads_a_tone_at_a_center():
-    cochleagram = FFTCochleagram()
+def test_calibrated_fft_cochleagram_reads_a_tone_at_a_center():
+    cochleagram = FFTCochleagram(bass_gain=False)
     channel = 30
     tone = so.pure_tone(0.5, FS, cochleagram.cfs[channel]).data[:, 0] * 1e-6 * 10 ** (60 / 20)
     levels = cochleagram(torch.as_tensor(tone)).numpy()
@@ -116,7 +116,7 @@ def test_fft_channels_are_wider_at_low_frequencies():
     cf = Cochleagram().cfs[channel]
     tone = torch.as_tensor(so.pure_tone(0.5, FS, cf + 40).data[:, 0] * 1e-6 * 10 ** (60 / 20))
     gammatone = Cochleagram()(tone)[channel, 10:40].mean()
-    fft = FFTCochleagram()(tone)[channel, 10:40].mean()
+    fft = FFTCochleagram(bass_gain=False)(tone)[channel, 10:40].mean()
     assert fft - gammatone > 10
 
 
@@ -129,7 +129,7 @@ def test_fft_cochleagram_gradients():
 
 
 def test_bass_gain_is_a_fixed_offset_per_channel_and_largest_at_low_frequencies():
-    calibrated, bass = FFTCochleagram(floor_db=-1000), FFTCochleagram(floor_db=-1000, bass_gain=True)
+    calibrated, bass = FFTCochleagram(floor_db=-1000, bass_gain=False), FFTCochleagram(floor_db=-1000)
     noise = torch.randn(10_000, dtype=torch.float64, generator=torch.Generator().manual_seed(3))
     tone = torch.as_tensor(so.pure_tone(0.5, FS, 1000.0).data[:, 0] * 1e-3)
     offsets = [(calibrated(x) - bass(x))[:, 5:40] for x in (1e-3 * noise, tone)]

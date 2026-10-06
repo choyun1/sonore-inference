@@ -17,7 +17,7 @@ Everything runs in float64. The number of harmonics is given. By default
 the sources' onsets and durations are given and their frequencies and levels
 constant; ``--whistle-timing inferred``, ``--trajectories`` and
 ``--harmonic-timing inferred`` bring in the corresponding parts of BASS's
-sources, and ``--cochleagram fft-bass-gain`` BASS's uncalibrated levels.
+sources, and ``--cochleagram fft-calibrated`` drops BASS's uncalibrated levels.
 
     python tools/compare_mistuned_harmonic.py --f0 200 --harmonic 3
 """
@@ -203,9 +203,9 @@ def main():
     parser.add_argument("--samples", type=int, default=128)
     parser.add_argument(
         "--cochleagram",
-        choices=["gammatone", "fft", "fft-bass-gain"],
+        choices=["gammatone", "fft", "fft-calibrated"],
         default="fft",
-        help="BASS's FFT approximation (default), with BASS's uncalibrated gain, or gammatone filtering",
+        help="BASS's FFT approximation with its uncalibrated gain (default), calibrated, or gammatones",
     )
     parser.add_argument(
         "--whistle-timing",
@@ -237,7 +237,7 @@ def main():
     cochleagram = {
         "gammatone": Cochleagram(),
         "fft": FFTCochleagram(),
-        "fft-bass-gain": FFTCochleagram(bass_gain=True),
+        "fft-calibrated": FFTCochleagram(bass_gain=False),
     }[args.cochleagram]
     n_harmonics = len(mh.harmonic_numbers(args.f0))
     structure_one = log_prior_structure(["harmonic"], TOTAL)
