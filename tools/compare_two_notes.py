@@ -7,7 +7,9 @@ points (B3) and the best posterior mode kept:
   and at 100 Hz (every component of the just fifth is a harmonic of 100 Hz);
   each start has every harmonic up to 2400 Hz, so they differ in size and
   each is its own hypothesis; the best is reported;
-- ``two``: two harmonic sources, started at the two notes;
+- ``two``: two harmonic sources, started at the two notes
+  (on a control, one note split into two sources an octave apart that sum
+  to it);
 - ``whistles``: a harmonic source at 200 Hz plus one whistle for each upper
   component that is not a harmonic of 200 Hz (not fitted at the octave,
   where there are none, nor on the controls).
@@ -85,6 +87,18 @@ def hypotheses(condition):
         start = harmonic_start(source, f0, lower_onset, lower_duration, levels)
         out.append((f"one@{f0:g}", Scene((source,), TIMING), [start]))
     if len(note_list) == 1:
+        # the note split into two sources an octave apart, which sum to it: the
+        # lower with its even harmonics 6 dB down, the upper at those harmonics, 6 dB down
+        half = {freq: level - 20 * math.log10(2) for freq, level in levels.items()}
+        split = {
+            freq: (half[freq] if round(freq / lower_f0) % 2 == 0 else level) for freq, level in levels.items()
+        }
+        lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)))
+        upper = Harmonic("h1", len(tn.harmonic_numbers(2 * lower_f0)))
+        start = harmonic_start(lower, lower_f0, lower_onset, lower_duration, split) | harmonic_start(
+            upper, 2 * lower_f0, lower_onset, lower_duration, half
+        )
+        out.append(("two", Scene((lower, upper), TIMING), [start]))
         return out
     upper_f0, falling, upper_onset, upper_duration = note_list[1]
     lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)))
