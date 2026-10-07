@@ -1,6 +1,7 @@
 # Milestone (b): two simultaneous notes — design
 
-Status: draft for Cho's decisions, 2026-10-07. Follows design v1, D3 (b‴).
+Status: accepted by Cho on 2026-10-07, all as recommended except B2, where Cho
+chose to include option (B) as well. Follows design v1, D3 (b‴).
 
 ## 1. Goal
 
@@ -36,7 +37,7 @@ nothing else can separate the notes. Proposed values, all assumptions:
 | --- | --- | --- |
 | Lower note f0 | 200 Hz | Where (a) matched the paper best |
 | Upper note f0 | 282.8 Hz (tritone), 300 Hz (just fifth), 400 Hz (octave) | D3 steps |
-| Harmonics | 12 per note, equal level | As the mistuned harmonic |
+| Harmonics | All up to 2400 Hz, equal level: 12, 8, 8 and 6 for 200, 282.8, 300 and 400 Hz | One ceiling for both notes, so that at the octave every upper component lands on a lower harmonic; 2400 Hz is the mistuned harmonic's top at 200 Hz |
 | Level | 60 dB per component | As (a) |
 | Spectra, step 1 | lower flat; upper falling 6 dB per octave of harmonic number | "Different spectra" |
 | Spectra, steps 2–4 | both flat | "Same spectrum" |
@@ -55,14 +56,21 @@ as one source.
 - **(B) Also a harmonic source plus whistles**, BASS's alternative explanation
   in (a).
 
-**Recommendation: (A).** With 12 components per note, explaining one note as
-whistles costs far more prior mass than a second harmonic source, so (B) adds
-fits without changing the answer. One known competitor for one source: at the
-just fifth, every component is a harmonic of 100 Hz, so one source at 100 Hz
-with every other harmonic missing explains the sound exactly. The spectrum
-GP's smoothness prior is what should penalize that comb. That makes step 3 a
-direct test of the spectrum prior, so H1 is fitted from both 200 Hz and 100 Hz
-starting points.
+**Recommendation: (A).** With several components per note, explaining one
+note as whistles costs far more prior mass than a second harmonic source.
+
+**Decision (Cho, 2026-10-07): (A) and (B), three hypotheses**, as BASS
+compared h, hw and hwq in (a), so the guess above is checked rather than
+assumed. (B) is one harmonic source plus one whistle for each component of the
+upper note that does not coincide with a harmonic of the lower note: 8
+whistles for the tritone, 4 for the fifth (harmonics 1, 3, 5 and 7 of 300 Hz).
+At the octave none is left, so (B) equals one source and is not fitted.
+
+One known competitor for one source: at the just fifth, every component is a
+harmonic of 100 Hz, so one source at 100 Hz with some harmonics missing
+explains the sound exactly. The spectrum GP's smoothness prior is what should
+penalize that comb, which makes step 3 a direct test of the spectrum prior.
+So one source is fitted from both 200 Hz and 100 Hz starting points.
 
 ### B3. Fitting and starting points
 
@@ -119,7 +127,8 @@ stimuli where they are surprising.
 
 A two-source fit has about twice the parameters of (a)'s. (a)'s fits took
 about 22 s each on the cloud CPU. With 24 stimuli, 2 hypotheses and 2–3
-starting points each, that is about 120 fits, roughly 1.5 h on one CPU.
+starting points each, that is about 120 fits, roughly 1.5 h on one CPU, plus about 1 h for
+B2's third hypothesis (its whistle fits are larger).
 To be measured on the first stimulus before the rest are run.
 
 ## 4. Order of work
