@@ -5,7 +5,13 @@ import pytest
 import sonore as so
 import torch
 
-from sonore_inference.cochleagram import Cochleagram, freq_to_erb, gammatone_response, gaussian_log_likelihood
+from sonore_inference.cochleagram import (
+    Cochleagram,
+    FFTCochleagram,
+    freq_to_erb,
+    gammatone_response,
+    gaussian_log_likelihood,
+)
 
 FS = 20_000
 
@@ -89,3 +95,47 @@ def test_gaussian_log_likelihood():
         -0.5 * ((o - p) / sigma) ** 2 - np.log(sigma * np.sqrt(2 * np.pi)) for o, p in [(30, 35), (40, 40)]
     )
     assert gaussian_log_likelihood(observed, predicted, sigma).item() == pytest.approx(expected)
+
+
+def test_calibrated_fft_cochleagram_reads_a_tone_at_a_center():
+    cochleagram = FFTCochleagram(bass_gain=False)
+    channel = 30
+    tone = so.pure_tone(0.5, FS, cochleagram.cfs[channel]).data[:, 0] * 1e-6 * 10 ** (60 / 20)
+    levels = cochleagram(torch.as_tensor(tone)).numpy()
+    assert levels.shape == Cochleagram()(torch.as_tensor(tone)).shape
+    times = cochleagram.frame_times(len(tone))
+    steady = (times > 0.1) & (times < 0.4)
+    np.testing.assert_allclose(levels[channel, steady], 60, atol=0.01)
+    assert cochleagram.fft_size == 1024  # Ellis: next power of two above twice the 500-sample window
+
+
+def test_fft_channels_are_wider_at_low_frequencies():
+    # a tone 40 Hz above a 104 Hz channel: far down the half-ERB gammatone,
+    # still inside the 25 ms window's main lobe
+    channel = int(np.argmin(np.abs(Cochleagram().cfs - 104)))
+    cf = Cochleagram().cfs[channel]
+    tone = torch.as_tensor(so.pure_tone(0.5, FS, cf + 40).data[:, 0] * 1e-6 * 10 ** (60 / 20))
+    gammatone = Cochleagram()(tone)[channel, 10:40].mean()
+    fft = FFTCochleagram(bass_gain=False)(tone)[channel, 10:40].mean()
+    assert fft - gammatone > 10
+
+
+def test_fft_cochleagram_gradients():
+    cochleagram = FFTCochleagram(n_channels=4, f_lo=200, f_hi=2000, floor_db=-1000, frame=0.005, hop=0.0025)
+    waveform = (
+        1e-3 * torch.randn(300, dtype=torch.float64, generator=torch.Generator().manual_seed(2))
+    ).requires_grad_()
+    assert torch.autograd.gradcheck(lambda x: cochleagram(x).sum(), (waveform,))
+
+
+def test_bass_gain_is_a_fixed_offset_per_channel_and_largest_at_low_frequencies():
+    calibrated, bass = FFTCochleagram(floor_db=-1000, bass_gain=False), FFTCochleagram(floor_db=-1000)
+    noise = torch.randn(10_000, dtype=torch.float64, generator=torch.Generator().manual_seed(3))
+    tone = torch.as_tensor(so.pure_tone(0.5, FS, 1000.0).data[:, 0] * 1e-3)
+    offsets = [(calibrated(x) - bass(x))[:, 5:40] for x in (1e-3 * noise, tone)]
+    np.testing.assert_allclose(offsets[0], offsets[0][:, :1].expand_as(offsets[0]), atol=1e-9)
+    np.testing.assert_allclose(offsets[0], offsets[1], atol=1e-9)
+    per_channel = offsets[0][:, 0].numpy()
+    low, high = np.argmin(np.abs(bass.cfs - 104)), np.argmin(np.abs(bass.cfs - 3165))
+    # BASS's own gammatonegram, run on 60 dB tones, read about 47 dB at 104 Hz and 56 dB at 3165 Hz
+    np.testing.assert_allclose(per_channel[[low, high]], [12.9, 3.7], atol=0.5)

@@ -295,6 +295,19 @@ to BASS's values (20 dB, σ = 10) so results stay comparable in kind. Which
 second representation to add is decided after milestone (b) shows where (B)
 fails.
 
+**Update 2026-10-05.** Both are implemented: `Cochleagram` (B) and
+`FFTCochleagram` (A, BASS's FFT approximation, PR #11). Below about 600 Hz
+(A)'s channels are 2 to 3.6 times wider than half-ERB gammatones, and with it
+the mistuned-harmonic thresholds move most of the way to the paper's. Cho
+chose (A) as the default for reproducing the paper's results; (B) stays
+available.
+
+**Update 2026-10-06.** BASS does not calibrate (A)'s channels: its pooled
+magnitudes are divided by the FFT size, so a 60 dB tone reads about 47 dB at
+100 Hz and 56 dB at 3 kHz, nearer the 20 dB floor. `FFTCochleagram` now does the same by default (within 0.6 dB of BASS's code
+per channel); Cho chose this default on 2026-10-06. `bass_gain=False` keeps
+the calibrated channels.
+
 ### D5. Inference method
 
 **Options.** Point estimates by gradient; stochastic variational inference as
