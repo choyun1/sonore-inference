@@ -31,9 +31,13 @@ Source = "https://github.com/choyun1/sonore-inference"
 [project.optional-dependencies]
 # sonore makes stimuli and serves as the test oracle (design D2); the
 # differentiable core never imports it. Pinned so its output cannot change
-# under us.
-stimuli = ["sonore==0.5.0"]
-dev = ["pytest>=8", "ruff>=0.5", "sonore==0.5.0"]
+# under us. Pinned to a commit, not a release, for gaussian_spectrogram (not on
+# PyPI yet; docs/design/source-reverb.md section 7).
+stimuli = ["sonore @ git+https://github.com/choyun1/sonore@a1cd2b2e9a292efc6b660a34aa6b774aed6a4c65"]
+dev = ["pytest>=8", "ruff>=0.5", "sonore @ git+https://github.com/choyun1/sonore@a1cd2b2e9a292efc6b660a34aa6b774aed6a4c65"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.version]
 path = "src/sonore_inference/__init__.py"
