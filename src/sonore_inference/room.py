@@ -132,6 +132,25 @@ FIT_ONSET_DB = np.array(
 )
 
 
+# The room prior, from Traer & McDermott's survey of 271 everyday spaces
+# (PNAS 2016; https://mcdermottlab.mit.edu/Reverb/IR_Survey.html), measured by
+# tools/rt60_prior_fit.py on 270 of its IRs (the files are not redistributed):
+# median RT60 over 30 ERB bands (T20 x 3) mapped to synth_ir's RT60, then a
+# gamma fit, which beat a lognormal by 18 AIC and an exponential by 58. 11%
+# of the spaces (outdoors) fall below 0.1 s. DRR is the energy of the 5 ms
+# around the peak over the rest: median 9.9 dB, quartiles 6.1 and 15.4 dB.
+RT60_PRIOR_SHAPE = 1.9668
+RT60_PRIOR_SCALE_S = 0.2203
+TYPICAL_DRR_DB = 9.9
+
+
+def log_prior_rt60(rt60: torch.Tensor | float) -> torch.Tensor:
+    """Log density of the median RT60 [s] under the survey's gamma fit."""
+    rt60 = torch.as_tensor(rt60, dtype=torch.float64)
+    shape, scale = RT60_PRIOR_SHAPE, RT60_PRIOR_SCALE_S
+    return (shape - 1) * torch.log(rt60) - rt60 / scale - math.lgamma(shape) - shape * math.log(scale)
+
+
 def cosine_responses(freqs: np.ndarray, n_bands: int, f_lo: float, f_hi: float) -> np.ndarray:
     """Amplitude responses of a half-cosine ERB filterbank at ``freqs`` [Hz],
     shape ``(len(freqs), n_bands + 2)``: sonore's ``cosine_filterbank`` with its
