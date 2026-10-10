@@ -32,7 +32,7 @@ from typing import ClassVar
 import torch
 
 from sonore_inference.cochleagram import Cochleagram, gaussian_log_likelihood
-from sonore_inference.evidence import Evidence, log_evidence
+from sonore_inference.evidence import Evidence, VariationalEvidence, log_evidence, variational_evidence
 from sonore_inference.fit import FitResult, fit
 from sonore_inference.priors import (
     F0_TRAJECTORY,
@@ -278,6 +278,7 @@ class SceneResult:
     evidence: Evidence
     structure_log_prior: float
     fits: list[FitResult] = field(default_factory=list)
+    variational: VariationalEvidence | None = None
 
     @property
     def log_posterior_laplace(self) -> float:
@@ -289,6 +290,16 @@ class SceneResult:
         """Unnormalized log posterior of the hypothesis, by importance sampling."""
         return self.evidence.importance + self.structure_log_prior
 
+    @property
+    def log_posterior_variational(self) -> float:
+        """Unnormalized log posterior of the hypothesis, by importance sampling from the variational fit."""
+        return self.variational.importance + self.structure_log_prior
+
+    @property
+    def log_posterior_elbo(self) -> float:
+        """Unnormalized log posterior of the hypothesis, by the ELBO (a lower bound)."""
+        return self.variational.elbo + self.structure_log_prior
+
 
 def evaluate(
     scene: Scene,
@@ -299,8 +310,13 @@ def evaluate(
     steps: int = 300,
     n_samples: int = 128,
     generator: torch.Generator | None = None,
+    variational_steps: int = 0,
 ) -> SceneResult:
-    """Fit ``scene`` from each initialization, keep the best mode, and estimate its evidence."""
+    """Fit ``scene`` from each initialization, keep the best mode, and estimate its evidence.
+
+    The Laplace and importance-sampling estimates are always made; with
+    ``variational_steps``, so is the variational one, from the same mode.
+    """
     fits = [
         fit(
             scene.render,
@@ -317,4 +333,9 @@ def evaluate(
     evidence = log_evidence(
         scene.log_joint(observed, cochleagram), best.params, n_samples=n_samples, generator=generator
     )
-    return SceneResult(best, evidence, scene.structure_log_prior(), fits)
+    variational = None
+    if variational_steps:
+        variational = variational_evidence(
+            scene.log_joint(observed, cochleagram), best.params, steps=variational_steps, generator=generator
+        )
+    return SceneResult(best, evidence, scene.structure_log_prior(), fits, variational)

@@ -90,3 +90,18 @@ def test_evaluate_keeps_the_best_initialization():
     assert result.fit is result.fits[1]
     assert math.isfinite(result.evidence.laplace)
     assert result.log_posterior_laplace == result.evidence.laplace + scene.structure_log_prior()
+
+
+def test_evaluate_can_add_the_variational_estimate():
+    timing = SceneTiming(fs=FS, total_duration=0.2, ramp=0.01)
+    event = dict(onset=0.05, duration=0.1)
+    cochleagram = FFTCochleagram()
+    scene = Scene((Whistle("w0"),), timing)
+    truth = Whistle("w0").initial(timing, freq=1000.0, level_db=60.0, **event)
+    observed = cochleagram(scene.render(truth)).detach()
+    generator = torch.Generator().manual_seed(0)
+    result = evaluate(
+        scene, [truth], observed, cochleagram, steps=3, n_samples=4, generator=generator, variational_steps=3
+    )
+    assert len(result.variational.elbo_history) == 3
+    assert result.log_posterior_variational == result.variational.importance + scene.structure_log_prior()

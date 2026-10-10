@@ -20,12 +20,28 @@ from sonore_inference.stimuli import mistuned_harmonic as mh
 TIMING = SceneTiming(fs=mh.FS, total_duration=mh.DURATION + 2 * mh.PADDING, ramp=mh.RAMP)
 
 
+def variational_columns(r1, r2):
+    v1, v2 = r1.variational, r2.variational
+    return (
+        f"  {v1.elbo:10.1f}  {v1.importance:11.1f}  {v1.effective_sample_size:7.0f}"
+        f"  {v2.elbo:10.1f}  {v2.importance:11.1f}  {v2.effective_sample_size:7.0f}"
+        f"  {r2.log_posterior_elbo - r1.log_posterior_elbo:13.1f}"
+        f"  {r2.log_posterior_variational - r1.log_posterior_variational:14.1f}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--f0", type=float, default=200.0)
     parser.add_argument("--harmonic", type=int, default=3)
     parser.add_argument("--steps", type=int, default=300)
     parser.add_argument("--samples", type=int, default=128)
+    parser.add_argument(
+        "--variational-steps",
+        type=int,
+        default=0,
+        help="also estimate the evidence by variational inference with this many steps (extra columns)",
+    )
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
     args = parser.parse_args()
     dtype = torch.float64
@@ -47,6 +63,12 @@ def main():
     print(
         "percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2"
         "  log_odds_laplace  log_odds_is  seconds"
+        + (
+            "  logZ1_elbo  logZ1_vi_is  ess1_vi  logZ2_elbo  logZ2_vi_is  ess2_vi"
+            "  log_odds_elbo  log_odds_vi_is"
+            if args.variational_steps
+            else ""
+        )
     )
     for percent in args.percents:
         start = time.perf_counter()
@@ -65,10 +87,24 @@ def main():
             )
         generator = torch.Generator().manual_seed(0)
         r1 = evaluate(
-            one, [base], observed, cochleagram, steps=args.steps, n_samples=args.samples, generator=generator
+            one,
+            [base],
+            observed,
+            cochleagram,
+            steps=args.steps,
+            n_samples=args.samples,
+            generator=generator,
+            variational_steps=args.variational_steps,
         )
         r2 = evaluate(
-            two, inits, observed, cochleagram, steps=args.steps, n_samples=args.samples, generator=generator
+            two,
+            inits,
+            observed,
+            cochleagram,
+            steps=args.steps,
+            n_samples=args.samples,
+            generator=generator,
+            variational_steps=args.variational_steps,
         )
         e1, e2 = r1.evidence, r2.evidence
         odds_laplace = r2.log_posterior_laplace - r1.log_posterior_laplace
@@ -76,7 +112,8 @@ def main():
         print(
             f"{percent:7g}  {e1.laplace:13.1f}  {e1.importance:8.1f}  {e1.effective_sample_size:4.0f}"
             f"  {e2.laplace:13.1f}  {e2.importance:8.1f}  {e2.effective_sample_size:4.0f}"
-            f"  {odds_laplace:16.1f}  {odds_is:11.1f}  {time.perf_counter() - start:7.1f}",
+            f"  {odds_laplace:16.1f}  {odds_is:11.1f}  {time.perf_counter() - start:7.1f}"
+            + (variational_columns(r1, r2) if args.variational_steps else ""),
             flush=True,
         )
         if e1.floored_eigenvalues or e2.floored_eigenvalues:
