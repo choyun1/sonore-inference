@@ -67,3 +67,19 @@ def test_gain_is_differentiable_and_longer_rooms_ring_longer():
     assert torch.isfinite(rt60.grad) and rt60.grad > 0
     gain = room.gain(torch.tensor(0.4))
     assert torch.all(gain[:, 0] >= 1.0)  # the direct impulse, plus the start of the tail
+
+
+def test_block_transfer_is_the_decay_weighted_by_a_triangle():
+    # Energy spread evenly over a block, echoed by exp(-rate t) for t < duration:
+    # the share landing d blocks later, by brute force on a fine grid.
+    room = RoomGain(n_blocks=12, block=0.01)
+    rate = torch.tensor([30.0, 200.0], dtype=torch.float64)
+    duration = torch.tensor(0.093, dtype=torch.float64)
+    fast = room._block_transfer(rate, duration).numpy()
+    step = 1e-5
+    t = np.arange(0, 0.2, step) + step / 2
+    for i, r in enumerate(rate.numpy()):
+        echo = np.where(t < duration.item(), np.exp(-r * t), 0.0)
+        for d in range(12):
+            weight = np.clip(1 - np.abs(t - d * 0.01) / 0.01, 0, None)
+            assert fast[i, d] == pytest.approx(np.sum(echo * weight) * step, rel=1e-4, abs=1e-12)
