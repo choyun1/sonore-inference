@@ -148,6 +148,12 @@ def main():
     parser.add_argument("--controls", action="store_true", help="fit the four one-note controls instead")
     parser.add_argument("--only", nargs="+", help="fit only these hypotheses (e.g. one@200 two)")
     parser.add_argument("--steps", type=int, default=300)
+    parser.add_argument(
+        "--variational-steps",
+        type=int,
+        default=0,
+        help="also estimate the evidence by variational inference with this many steps (extra columns)",
+    )
     parser.add_argument("--samples", type=int, default=128)
     args = parser.parse_args()
     if args.controls:
@@ -163,7 +169,7 @@ def main():
     )
     print(
         "stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored"
-        "  log_joint_at_mode  seconds"
+        "  log_joint_at_mode  seconds" + ("  elbo  vi_importance  vi_ess" if args.variational_steps else "")
     )
     for condition in conditions:
         name = label(condition)
@@ -186,6 +192,7 @@ def main():
                 steps=args.steps,
                 n_samples=args.samples,
                 generator=generator,
+                variational_steps=args.variational_steps,
             )
             results[hypothesis] = result
             e = result.evidence
@@ -194,13 +201,20 @@ def main():
                 f"{name:34s}  {hypothesis:9s}  {n_params:5d}  {result.structure_log_prior:7.2f}"
                 f"  {e.laplace:9.1f}  {e.importance:9.1f}  {e.effective_sample_size:4.0f}"
                 f"  {e.floored_eigenvalues:3d}"
-                f"  {e.log_joint_at_mode:9.1f}  {time.perf_counter() - begin:7.1f}",
+                f"  {e.log_joint_at_mode:9.1f}  {time.perf_counter() - begin:7.1f}"
+                + (
+                    f"  {result.variational.elbo:9.1f}  {result.variational.importance:9.1f}"
+                    f"  {result.variational.effective_sample_size:4.0f}"
+                    if result.variational
+                    else ""
+                ),
                 flush=True,
             )
         ones = [r for h, r in results.items() if h.startswith("one@")]
         if not ones:
             continue
-        for estimate in ("laplace", "importance"):
+        estimates = ["laplace", "importance"] + (["elbo", "variational"] if args.variational_steps else [])
+        for estimate in estimates:
             best_one = max(getattr(r, f"log_posterior_{estimate}") for r in ones)
             odds = {
                 h: getattr(r, f"log_posterior_{estimate}") - best_one
