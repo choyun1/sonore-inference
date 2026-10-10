@@ -263,10 +263,16 @@ class Scene:
             rates |= source.learning_rates()
         return rates
 
-    def log_joint(self, observed: torch.Tensor, cochleagram: Cochleagram) -> Callable[[Params], torch.Tensor]:
-        """``params -> log p(observed | params) + log p(params)``, for the evidence."""
+    def log_joint(
+        self, observed: torch.Tensor, cochleagram: Cochleagram, sigma: float = 10.0
+    ) -> Callable[[Params], torch.Tensor]:
+        """``params -> log p(observed | params) + log p(params)``, for the evidence.
+
+        ``sigma`` is the likelihood's SD [dB] (BASS's value by default).
+        """
         return lambda params: (
-            gaussian_log_likelihood(observed, cochleagram(self.render(params))) + self.log_prior(params)
+            gaussian_log_likelihood(observed, cochleagram(self.render(params)), sigma)
+            + self.log_prior(params)
         )
 
 
@@ -311,11 +317,13 @@ def evaluate(
     n_samples: int = 128,
     generator: torch.Generator | None = None,
     variational_steps: int = 0,
+    sigma: float = 10.0,
 ) -> SceneResult:
     """Fit ``scene`` from each initialization, keep the best mode, and estimate its evidence.
 
     The Laplace and importance-sampling estimates are always made; with
     ``variational_steps``, so is the variational one, from the same mode.
+    ``sigma`` is the likelihood's SD [dB] (BASS's value by default).
     """
     fits = [
         fit(
@@ -325,17 +333,21 @@ def evaluate(
             cochleagram,
             learning_rates=scene.learning_rates(),
             steps=steps,
+            sigma=sigma,
             log_prior=scene.log_prior,
         )
         for init in inits
     ]
     best = max(fits, key=lambda result: result.log_likelihood)
     evidence = log_evidence(
-        scene.log_joint(observed, cochleagram), best.params, n_samples=n_samples, generator=generator
+        scene.log_joint(observed, cochleagram, sigma), best.params, n_samples=n_samples, generator=generator
     )
     variational = None
     if variational_steps:
         variational = variational_evidence(
-            scene.log_joint(observed, cochleagram), best.params, steps=variational_steps, generator=generator
+            scene.log_joint(observed, cochleagram, sigma),
+            best.params,
+            steps=variational_steps,
+            generator=generator,
         )
     return SceneResult(best, evidence, scene.structure_log_prior(), fits, variational)
