@@ -242,9 +242,12 @@ Two things are open:
    matching prior (R1), with a covariance parity test, and redo probe 4 at
    sonore's defaults.
 2. Expected-energy model (R2/R3) with tests against `band_rt60s` and
-   averaged renders; measure the carrier-noise residual and the log-bias
-   correction.
-3. Block-power likelihood (R4); likelihood slices at the truth.
+   averaged renders; measure the room's residual and log bias. *(Update:
+   the source's carrier-noise residual moves to step 3, where the source's
+   expected band power is modelled.)*
+3. Block-power likelihood (R4) with the source's expected band power;
+   carrier-noise residual and log-bias correction; likelihood slices at the
+   truth.
 4. Survey download and RT60 prior fit (R8).
 5. Laplace grid (R5); experiment (a).
 6. Experiment (b).
