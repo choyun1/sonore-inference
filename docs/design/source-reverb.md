@@ -1,6 +1,6 @@
 # Source and room inference: design document
 
-Status: **draft for Cho**, written 2026-10-10. AI-assisted (Claude), from
+Status: **draft for Cho**, written 2026-10-10; R1 updated the same day for sonore's `gaussian_spectrogram`. AI-assisted (Claude), from
 HANDOFF-source-reverb.md, the 2017-18 archive, McDermott, Wrobleski & Oxenham
 (2011) and the evaluation of the same date. No library code until Cho accepts
 this.
@@ -38,7 +38,7 @@ Out of scope: several sources, binaural cues, real recordings as observations
 |---|---|---|
 | S1 | Direct sound | Included at a typical DRR. Tail only is a later control. |
 | S2 | Source timing | 400 ms source ending inside the recording, onset and offset known to the model. A sound with no offset is a later experiment. |
-| S3 | Source generator | Write the corrected generator here, with a test. Add a parity test against sonore's version when it lands, then switch. |
+| S3 | Source generator | Write the corrected generator here, with a test. Add a parity test against sonore's version when it lands, then switch. **Update 2026-10-10:** sonore now has it as `so.gaussian_spectrogram` (main at a1cd2b2, not yet on PyPI), so observations use sonore directly and core keeps only the prior (R1). |
 | S4 | RT60 prior data | Traer & McDermott's published 271-IR survey, which can be checked, not the archive's 469 values of unknown origin. |
 | S5 | Source variance | The 2017 value of 0.5 had no source. Make it a prior range. |
 
@@ -81,27 +81,40 @@ needs sounds drawn from that prior.
   Traer & McDermott. Against: no prior fits them exactly, so they cannot be
   the in-model check.
 
-**Recommendation: (A) now, and (C) later as an out-of-model test.** The
-specification, with corrected construction (cells ordered as the covariance
-assumes, each window divided by its noise RMS):
+**Recommendation: (A) now, and (C) later as an out-of-model test.**
 
-- Bands: 30 half-cosine ERB filters from 50 Hz to 8 kHz, about 1 ERB apart
-  [estimate: MWO used 39 over 20 Hz to 4 kHz (about 0.66 ERB apart); 8 kHz
-  covers the room's frequency profile].
-- Windows: 20 ms raised cosines at 50% overlap, so the grid step is 10 ms
-  [MWO].
-- Correlation: exp(−a·|Δ ERB-number|) · exp(−b·|Δ grid step|), with
-  defaults a = 0.11 per ERB and b = 0.065 per step. 0.11 is MWO's 0.075 per
-  filter converted at their spacing of about 0.66 ERB. My probes used 0.075
-  per roughly 1 ERB band, a smoother source than MWO's.
-- Mean: flat spectrum, which MWO achieves by setting the mean proportional
-  to bandwidth [MWO]. The overall level is normalised out.
-- Hyperparameters inferred: a, b, and the log-power sd s. a and b are
-  log-uniform over a factor of 10 around their defaults, as in 2017. s is
-  log-uniform from 2 to 20 dB [estimate: brackets the probe's assumed 7 dB;
-  MWO does not state theirs].
-- Check: realised against intended grid correlation. The probe version gives
-  0.935 [probe 3], against 0.72 for the 2017 code [handoff].
+Observations are made with sonore's `gaussian_spectrogram`, which landed on
+2026-10-10, put on a Gaussian-noise carrier with `Envelopes.to_sound`. Core
+does not import sonore (design-v1 D2), so it implements only the matching
+prior: a Gaussian process on the log-amplitude grid with the same separable
+covariance. A test checks that covariance against sonore's draws.
+
+I checked sonore's version [sonore_gs_check, 2026-10-10]:
+- Over 2000 draws, the field has variance 0.998. Its lag-1 correlations are
+  0.926 across bands (target 0.928) and 0.935 across windows (target
+  0.937). sonore builds the exact covariance with a recursion, so neither
+  2017 bug can occur.
+- Over 5 rendered 400 ms sounds, the sound's own cell levels correlate
+  0.935 to 0.968 with the drawn ones. The 2017 code scored 0.72 [handoff].
+
+Settings, taken from sonore's defaults, which follow the paper:
+- 39 half-cosine ERB filters from 20 Hz to 4 kHz, 0.656 ERB apart.
+- 20 ms raised-cosine windows at 50% overlap, so the grid step is 10 ms.
+- Correlation lengths of 8.78 ERB and 154 ms. These are MWO's 0.075 per
+  filter and 0.065 per window.
+- A flat mean spectrum.
+- Raising the upper limit to 8 kHz, to see more of the room's frequency
+  profile, is a one-argument change. I recommend the paper's 4 kHz first.
+
+Hyperparameters to infer:
+- The two correlation lengths, each log-uniform over a factor of 10 around
+  its default, as in 2017.
+- The sd, log-uniform from 3 to 30 dB [estimate]. sonore's default is
+  14.1 dB, which is the 2017 variance of 0.5 read as log10 amplitude. That
+  value was arbitrary (S5), so it serves only as the default for (a).
+
+My probes assumed 7 dB and were rougher across bands than MWO. Before the
+grid runs, probe 4 is redone at sonore's defaults.
 
 ### R2. Room model
 
@@ -185,7 +198,7 @@ the truth are plotted, as the handoff asks.
 ### R6. Framework and placement
 
 PyTorch, per design-v1 D1. The numpy probes are ported, not reused. New
-modules go under `src/sonore_inference/`: `spectrotemporal.py` (R1 source and
+modules go under `src/sonore_inference/`: `spectrotemporal.py` (R1 source
 prior), `room.py` (R2/R3 expected energy) and `blockpower.py` (R4). Tools go
 in `tools/`. The milestone (b) modules (`scene.py`, `cochleagram.py`,
 `evidence.py`) are reused without edits, so the two lines of work do not
@@ -225,7 +238,9 @@ Two things are open:
 
 ## 5. Order of work after acceptance
 
-1. Generator (R1) and a test of its realised correlation.
+1. Pin sonore at a release that has `gaussian_spectrogram`. Write core's
+   matching prior (R1), with a covariance parity test, and redo probe 4 at
+   sonore's defaults.
 2. Expected-energy model (R2/R3) with tests against `band_rt60s` and
    averaged renders; measure the carrier-noise residual and the log-bias
    correction.
