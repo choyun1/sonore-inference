@@ -1,11 +1,18 @@
 # A5. Full model: trajectories and harmonic timing
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-06); milestone (a) closed 2026-10-07 with the
 100 Hz harmonic 1 gap recorded. **Paper target:** Fig. 7D (right).
 **Code:** PR [#13](https://github.com/choyun1/sonore-inference/pull/13) (first on main at `ceccaee`); re-run
 through the scene module of PR [#15](https://github.com/choyun1/sonore-inference/pull/15) (`393ed82`).
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 What is left after adding the rest of BASS's harmonic and whistle sources?
 

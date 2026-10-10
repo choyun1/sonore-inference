@@ -1,5 +1,9 @@
 # Computational experiments
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 Each experiment has an ID and its own page. A page states what the
 experiment asks, which part of Cusimano, Hewitt & McDermott (2024),
 *Listening with generative models* (Cognition 253, 105874, CC BY 4.0), it is
@@ -19,6 +23,84 @@ Conventions on every page:
 - **One seed** for all our runs and for the BASS run. The paper averaged 10.
 - Every number comes from a committed output under [`data/`](https://github.com/choyun1/sonore-inference/tree/main/docs/experiments/data) and a
   script under `tools/`, or is marked as an estimate.
+
+## How the experiments work
+
+### The main idea
+
+The paper treats hearing as inference in a generative model. The model
+says how a scene is made: a few sound sources, each of a type (harmonic
+tone, whistle, noise), each with its own unknowns (f0, level, spectrum,
+onset, duration, and how these change over time), each with a prior. A
+renderer turns a scene into a waveform, and a cochleagram turns the
+waveform into a time-frequency picture. Hearing a sound means finding the
+scenes that could have made it.
+
+To ask "one source or two?", each answer is a separate hypothesis with its
+own set of sources. For each hypothesis we find the best-fitting scene and
+estimate its **marginal likelihood** (the evidence): how well the
+hypothesis explains the sound, averaged over its unknowns. Extra sources
+fit better but cost prior probability, so the evidence includes an Occam
+penalty. The **log posterior odds** of two sources over one is the
+difference of the two log evidences plus the log prior of each structure.
+Positive favours two sources.
+
+Sweeping a stimulus parameter (mistuning, onset asynchrony) gives a curve
+of odds, and the paper's Eqn 2 turns that curve into a **threshold**: the
+point where the model switches from hearing one source to two. These
+thresholds are what the paper compares with listeners, and what we
+compare with the paper's model.
+
+The paper's own code is BASS (github.com/mcusi/bass). We re-implement the
+model from the paper alone, because BASS has no licence. We ran BASS only
+locally, as a check (A6).
+
+### The common setup
+
+What every experiment here shares unless its page says otherwise:
+
+- **Representation.** A cochleagram of 64 channels from 20 to 9423 Hz, in
+  dB with a 20 dB floor, 10 ms frames. A1 uses true gammatone filters. From
+  A2 on it is BASS's FFT approximation, and from A4 on with BASS's
+  uncalibrated channel gain.
+- **Likelihood.** Each cochleagram cell is Gaussian around the rendered
+  scene's value, with an SD of 10 dB (BASS's value).
+- **Priors.** The paper's (Tables A.1 and A.2): the number of sources
+  (Poisson, 1 per second, at least one), source types, frequencies, levels
+  and the harmonic spectrum. Gaussian-process hyperparameters are fixed at
+  the medians of Table A.2, where the paper infers them per sound.
+- **Fitting.** For each hypothesis, Adam gradient ascent on the log
+  posterior from the starting points the paper gives (App. C), keeping the
+  best mode. The question is the evidence for each hypothesis, not whether
+  a blind search finds it.
+- **Evidence.** Laplace (a Gaussian at the mode, from the Hessian) and
+  importance sampling from that Gaussian. From A7 on, also a variational
+  fit, as the paper does (App. B), and importance sampling from it. A
+  Laplace estimate is left out where the fit has no true peak (the Hessian
+  had to be floored).
+- **Thresholds.** Eqn 2 as we read it: lowest level plus the area under
+  p(one source). Where noted, also the rule in BASS's analysis code.
+
+### The three groups
+
+- **A, mistuned harmonic (milestone (a)).** Reproduce the paper's Fig. 7D.
+  A complex tone (f0 100, 200 or 400 Hz, equal 60 dB harmonics, 400 ms)
+  with harmonic 1, 2 or 3 mistuned by 0 to 50% of f0. Hypotheses: one
+  harmonic source, or a harmonic source plus a whistle at the mistuned
+  component. A1 to A5 add BASS's details one at a time, to find what makes
+  the thresholds match. A6 runs BASS itself, and A7 checks the evidence
+  method.
+- **B, two simultaneous notes (milestone (b)).** Not in the paper. A
+  200 Hz note with a second note a tritone, a just fifth or an octave
+  above, starting 0 to 240 ms later. Hypotheses: one harmonic source, two,
+  or one plus whistles. The question is whether the model hears two notes
+  and how much onset asynchrony it needs.
+- **R, source and room.** Not in the paper. One noise-like source in one
+  room. A different model: the source is a Gaussian spectrogram
+  (McDermott, Wrobleski & Oxenham, 2011), the room is a band-by-band
+  exponential decay (RT60) with direct sound, and the likelihood is on band
+  power in 10 ms blocks. The question is whether RT60 and the source can
+  be told apart from one sound.
 
 ## Experiments
 

@@ -1,9 +1,16 @@
 # A3. Whistle onset and duration inferred
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-05). **Paper target:** Fig. 7D (right).
 **Code:** PR [#12](https://github.com/choyun1/sonore-inference/pull/12), first on main at `12305f6`.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 In the paper every event's onset and duration are unknowns with a prior. In
 A1 and A2 the whistle was given the stimulus's timing for free. How much

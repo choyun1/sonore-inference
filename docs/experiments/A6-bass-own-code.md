@@ -1,11 +1,18 @@
 # A6. BASS's own code on two conditions
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-07). **Paper target:** Fig. 7D (right).
 **Code:** BASS (github.com/mcusi/bass at `48e3755`), run locally on Cho's
 PC. BASS has no licence, so none of its code, or our local fixes to it, is
 in this repository; only its printed results are.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 A5 leaves two gaps: 100 Hz harmonic 1 and 200 Hz harmonic 2. Which come from
 our model, and which from how the paper turned evidence into a threshold?

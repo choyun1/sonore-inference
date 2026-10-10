@@ -1,5 +1,9 @@
 # B2. Two simultaneous notes, variational evidence
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-10). **Paper target:** none (see
 [B1](B1-two-notes-laplace.md)); no paper values are compared.
 **Code:** `tools/compare_two_notes.py --variational-steps`, PR
@@ -7,6 +11,9 @@
 PR [#20](https://github.com/choyun1/sonore-inference/pull/20). Design: [milestone (b)](../design/milestone-b.md).
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 B1's question, with an evidence estimate that does not depend on reaching
 a true peak, and with longer octave asynchronies (120, 160, 240 ms).

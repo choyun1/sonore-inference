@@ -1,10 +1,17 @@
 # A7. Variational evidence on the full model
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-10). **Paper target:** Fig. 7D (right); the
 paper's inference is variational (App. B). **Code:** PR [#20](https://github.com/choyun1/sonore-inference/pull/20),
 first on main at `73da5f7`.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 Milestone (b) needed a more robust evidence estimate than Laplace (see B1).
 Before using it there: does variational evidence, as the paper estimates

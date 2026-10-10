@@ -1,9 +1,16 @@
 # A2. BASS's FFT cochleagram
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-05). **Paper target:** Fig. 7D (right).
 **Code:** PR [#11](https://github.com/choyun1/sonore-inference/pull/11), first on main at `40f7da4`.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 A1's thresholds were far below the paper's model. Does the cochleagram
 explain it? BASS computes its cochleagram with an FFT approximation (Ellis,

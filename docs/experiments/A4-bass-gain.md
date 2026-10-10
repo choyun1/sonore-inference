@@ -1,9 +1,16 @@
 # A4. BASS's uncalibrated channel gain
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-06). **Paper target:** Fig. 7D (right).
 **Code:** PR [#13](https://github.com/choyun1/sonore-inference/pull/13), first on main at `ceccaee`.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 BASS's FFT cochleagram divides magnitudes by the FFT length and does not
 calibrate each channel. Run through BASS's own code, a 60 dB tone reads

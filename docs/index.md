@@ -1,5 +1,9 @@
 # sonore-inference
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 Inferring what is in an auditory scene by inverting a generative model of
 sound (analysis by synthesis), building on Cusimano, Hewitt & McDermott
 (2024), *Listening with generative models*, Cognition 253, 105874.

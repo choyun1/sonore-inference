@@ -1,5 +1,9 @@
 # R1. Source and room (RT60) from one reverberant sound
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status: in progress.** The model's building blocks are written and
 checked; the inference experiments have not been run. This page will be
 updated as they are.
@@ -13,6 +17,9 @@ be labelled a comparison, not a validation. Design:
 2026-10-10).
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 One source plays in one room. From the single sound that results, can the
 model infer the source's spectrotemporal statistics and the room's RT60?

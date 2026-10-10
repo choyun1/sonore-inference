@@ -1,10 +1,17 @@
 # A1. Mistuned harmonic with a gammatone cochleagram
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-05). **Paper target:** Fig. 7D (right), stimuli
 and analysis of App. C.6. **Code:** PRs [#8](https://github.com/choyun1/sonore-inference/pull/8) (priors, evidence)
 and [#9](https://github.com/choyun1/sonore-inference/pull/9) (thresholds), first on main at `ce484ce`.
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 Does a re-implementation built only from the paper show a mistuned-harmonic
 effect, and at what thresholds?

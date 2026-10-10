@@ -1,5 +1,9 @@
 # B1. Two simultaneous notes, Laplace evidence (first pass)
 
+> **Under review.** This is a working record, not reviewed results. The work was
+> done with AI assistance (Claude), and Adrian Cho has not yet checked it
+> carefully. Numbers, methods and interpretations may change.
+
 **Status:** done (2026-10-07), **superseded by [B2](B2-two-notes-variational.md)**:
 the octave's margins here are within Laplace's own run-to-run noise.
 **Paper target:** none. The paper has no two-note experiment; the closest
@@ -10,6 +14,9 @@ PR [#15](https://github.com/choyun1/sonore-inference/pull/15), tool `tools/compa
 PR [#23](https://github.com/choyun1/sonore-inference/pull/23), `121aab4`). Design: [milestone (b)](../design/milestone-b.md).
 
 ## Question
+
+Shared background: [how the experiments work](index.md#how-the-experiments-work).
+
 
 Can the model tell two harmonic notes sounding together from one note, and
 how does that depend on the interval and on onset asynchrony?
