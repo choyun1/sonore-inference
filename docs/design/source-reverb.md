@@ -223,7 +223,8 @@ collide.
 
 ### R8. Priors and the survey data
 
-**RT60:** lognormal, fitted to the RT60s that core's own `measure_rt60`
+**RT60:** gamma (changed from lognormal 2026-10-10: on the survey it fits
+better by 18 AIC; see §5 step 4), fitted to the RT60s that core's own `measure_rt60`
 equivalent measures from the 271 survey IRs (S4). A lognormal beat an
 exponential by 258 AIC on the archive's 469 values [probe 1]; the fit is
 redone on the survey. **The survey files are not redistributed.** A `tools/`
@@ -253,8 +254,8 @@ Two things are open:
    RT60, which matters for (b)'s 20 dB floor.)*
 4. Survey download and RT60 prior fit (R8). *(Done on 270 survey IRs: a
    gamma, shape 1.97 and scale 0.220 s (median 0.362 s), beat the lognormal
-   (median 0.329 s, sigma 0.80) by 18 AIC, so the prior is gamma, pending
-   Cho; 11% of spaces are below 0.1 s. Median DRR 9.9 dB, which confirms
+   (median 0.329 s, sigma 0.80) by 18 AIC, so the prior is gamma (Cho chose
+   it 2026-10-10); 11% of spaces are below 0.1 s. Median DRR 9.9 dB, which confirms
    R2's typical 10 dB.)*
 5. Laplace grid (R5); experiment (a).
 6. Experiment (b).
