@@ -10,11 +10,15 @@ observer does not know the draw, so this module averages it out: it gives the
 filterbank and each time block, as a differentiable function of the median
 RT60.
 
-The output is a gain: band ``b``'s expected energy in block ``k`` divided by
-the energy band ``b`` passes from a unit impulse. A sound whose spectrum is
-flat across band ``b`` then has expected reverberant energy in block ``k`` of
-``sum_j S_b(j) gain_b(k - j)``, ``S_b(j)`` being its own energy in block
-``j``. The direct impulse is a gain of 1 in block 0.
+The output is a block-to-block gain: in band ``b``, for energy spread
+evenly over one block, the expected energy the room puts ``k`` blocks later,
+relative to the energy band ``b`` passes from a unit impulse. A sound whose
+spectrum is flat across band ``b`` then has expected reverberant energy in
+block ``k`` of ``sum_j S_b(j) gain_b(k - j)``, ``S_b(j)`` being its own
+energy in block ``j``. The direct impulse is a gain of 1 in block 0. (Up to
+step 2 the gain was the impulse response's energy in each block, which puts
+every echo half a block early: 0.4 to 1.4 dB too little energy in the tail
+for RT60s of 0.8 to 0.2 s.)
 
 Only the natural room is modelled (exponential decay, ecological frequency
 profile and onset levels); the atypical rooms appear only in observations.
@@ -210,18 +214,41 @@ class RoomGain:
         shares = analysis.T @ room / len(freqs) / analysis.mean(0)[:, None]
         return torch.from_numpy(shares), torch.from_numpy(room.mean(0))
 
+    def _block_transfer(self, rate: torch.Tensor, duration: torch.Tensor) -> torch.Tensor:
+        """``(len(rate), n_blocks)``: for energy spread evenly over one block,
+        the share that an energy decay ``exp(-rate t)``, ``0 <= t < duration``,
+        moves ``d`` blocks later. That is the decay weighted by a triangle of
+        half-width one block centred on ``d`` blocks, not the decay's energy
+        within block ``d``: a sound's energy in a block arrives across the
+        block, so its echoes do too."""
+        width = self.block
+        centers = torch.arange(self.n_blocks, dtype=torch.float64) * width
+        rate = rate[:, None]
+
+        def weighted(start, stop, at_start, slope):
+            # integral over [start, stop] (clipped to the decay) of
+            # (at_start + slope (t - start)) exp(-rate t)
+            lo = start.clamp(0, None).clamp(None, duration)
+            hi = stop.clamp(0, None).clamp(None, duration)
+            span = (hi - lo).clamp_min(0)
+            level = at_start + slope * (lo - start)
+            x = rate * span
+            first = -torch.expm1(-x) / rate
+            second = (-torch.expm1(-x) - x * torch.exp(-x)) / rate**2
+            return torch.exp(-rate * lo) * (level * first + slope * second)
+
+        rising = weighted(centers - width, centers, 0.0, 1 / width)
+        falling = weighted(centers, centers + width, 1.0, -1 / width)
+        return rising + falling
+
     def gain(self, rt60: torch.Tensor | float) -> torch.Tensor:
         """Expected gain, shape ``(n_bands, n_blocks)``, for median RT60 ``rt60`` [s]."""
         rt60 = torch.as_tensor(rt60, dtype=torch.float64)
         taus = band_rt60s(rt60, self._room_freqs)
         onset_power = 10 ** (onset_levels_db(rt60, self._room_freqs) / 10)
         duration = self.decay_db / 60 * taus.max()
-        edges = torch.arange(self.n_blocks + 1, dtype=torch.float64) * self.block
-        edges = torch.minimum(edges, duration)
-        # energy of onset_power * 10^(-6 t / tau) over each block, per room band
         rate = 6 * math.log(10) / taus
-        decayed = torch.exp(-rate[:, None] * edges[None, :])
-        block_energy = (onset_power / rate)[:, None] * (decayed[:, :-1] - decayed[:, 1:])
+        block_energy = onset_power[:, None] * self._block_transfer(rate, duration)
         total_energy = (onset_power / rate) * (1 - torch.exp(-rate * duration))
         shares, room_share = self._weights
         tail = shares @ block_energy / (room_share @ total_energy)

@@ -247,7 +247,10 @@ Two things are open:
    expected band power is modelled.)*
 3. Block-power likelihood (R4) with the source's expected band power;
    carrier-noise residual and log-bias correction; likelihood slices at the
-   truth.
+   truth. *(Done: bias -1.3 dB and sigma 3.6 dB pooled at RT60 0.4 s, DRR
+   10 dB, larger in low bands; step 2's room gain is corrected to a
+   block-to-block transfer. At a 20 dB floor one sound barely constrains
+   RT60, which matters for (b)'s 20 dB floor.)*
 4. Survey download and RT60 prior fit (R8).
 5. Laplace grid (R5); experiment (a).
 6. Experiment (b).
