@@ -155,6 +155,9 @@ def main():
         help="also estimate the evidence by variational inference with this many steps (extra columns)",
     )
     parser.add_argument("--samples", type=int, default=128)
+    parser.add_argument(
+        "--sigma", type=float, default=10.0, help="likelihood SD [dB] (BASS's value by default)"
+    )
     args = parser.parse_args()
     if args.controls:
         conditions = [{"interval": "control", "f0": float(f0)} for f0 in tn.CONTROL_F0S]
@@ -164,8 +167,8 @@ def main():
         parser.error("give --interval or --controls")
     cochleagram = FFTCochleagram()
     print(
-        f"{args.steps} Adam steps, {args.samples} samples, fft-bass-gain cochleagram, trajectories, "
-        "all timing inferred"
+        f"{args.steps} Adam steps, {args.samples} samples, sigma {args.sigma:g} dB, "
+        "fft-bass-gain cochleagram, trajectories, all timing inferred"
     )
     print(
         "stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored"
@@ -193,6 +196,7 @@ def main():
                 n_samples=args.samples,
                 generator=generator,
                 variational_steps=args.variational_steps,
+                sigma=args.sigma,
             )
             results[hypothesis] = result
             e = result.evidence

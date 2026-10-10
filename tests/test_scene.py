@@ -105,3 +105,26 @@ def test_evaluate_can_add_the_variational_estimate():
     )
     assert len(result.variational.elbo_history) == 3
     assert result.log_posterior_variational == result.variational.importance + scene.structure_log_prior()
+
+
+def test_the_likelihood_sd_reaches_the_fit_and_the_evidence():
+    timing = SceneTiming(fs=FS, total_duration=0.2, ramp=0.01)
+    event = dict(onset=0.05, duration=0.1)
+    cochleagram = FFTCochleagram()
+    scene = Scene((Whistle("w0"),), timing)
+    truth = Whistle("w0").initial(timing, freq=1000.0, level_db=60.0, **event)
+    observed = cochleagram(scene.render(truth)).detach()
+    # at the truth the residual is zero, so only the normalizer depends on sigma
+    n_cells = observed.numel()
+    at_truth = scene.log_joint(observed, cochleagram, 5.0)(truth).item()
+    assert at_truth == pytest.approx(
+        scene.log_prior(truth).item() - n_cells * (math.log(5.0) + 0.5 * math.log(2 * math.pi))
+    )
+    generator = torch.Generator().manual_seed(0)
+    result = evaluate(
+        scene, [truth], observed, cochleagram, steps=3, n_samples=4, generator=generator, sigma=5.0
+    )
+    assert result.fit.log_likelihood == pytest.approx(
+        scene.log_joint(observed, cochleagram, 5.0)(result.fit.params).item()
+    )
+    assert result.evidence.log_joint_at_mode == pytest.approx(result.fit.log_likelihood)
