@@ -7,7 +7,7 @@ import pytest
 import torch
 
 from sonore_inference.cochleagram import erb_to_freq, freq_to_erb
-from sonore_inference.evidence import log_evidence
+from sonore_inference.evidence import log_evidence, variational_evidence
 from sonore_inference.priors import (
     log_prior_event_timing,
     log_prior_level,
@@ -100,6 +100,49 @@ def test_evidence_of_a_gaussian_model():
     assert result.importance == pytest.approx(exact, abs=1e-12)
     assert result.effective_sample_size == pytest.approx(64)
     assert result.floored_eigenvalues == 0
+
+
+def test_variational_evidence_of_a_gaussian_model():
+    # the same closed form: the Gaussian family contains the posterior, so the ELBO reaches it
+    y = torch.tensor([0.3, 1.1, 0.7, 1.9], dtype=torch.float64)
+    zero, one, two = (torch.tensor(v, dtype=torch.float64) for v in (0.0, 1.0, 2.0))
+
+    def log_joint(params):
+        theta = params["theta"]
+        likelihood = torch.distributions.Normal(theta, one).log_prob(y).sum()
+        return likelihood + torch.distributions.Normal(zero, two).log_prob(theta).sum()
+
+    covariance = torch.eye(4, dtype=torch.float64) + 4.0
+    exact = torch.distributions.MultivariateNormal(torch.zeros(4, dtype=torch.float64), covariance).log_prob(
+        y
+    )
+    mode = {"theta": (y.sum() / 4.25).reshape(1)}
+    result = variational_evidence(
+        log_joint, mode, steps=300, n_samples=64, generator=torch.Generator().manual_seed(0)
+    )
+    assert result.elbo == pytest.approx(exact.item(), abs=0.05)
+    assert result.importance == pytest.approx(exact.item(), abs=0.01)
+    assert result.effective_sample_size > 60
+
+
+def test_variational_evidence_where_the_curvature_at_the_mode_misleads():
+    # a standard normal with a ripple: the curvature at the mode is 1 + 0.3 * 400 = 121,
+    # so the Laplace estimate is far too small; the variational one is not
+    def log_joint(params):
+        x = params["x"]
+        return (-0.5 * x**2 + 0.3 * torch.cos(20 * x)).sum()
+
+    grid = torch.linspace(-10, 10, 200_001, dtype=torch.float64)
+    exact = torch.logsumexp(-0.5 * grid**2 + 0.3 * torch.cos(20 * grid), 0).item() + math.log(
+        grid[1] - grid[0]
+    )
+    mode = {"x": torch.tensor([0.0], dtype=torch.float64)}
+    generator = torch.Generator().manual_seed(0)
+    laplace = log_evidence(log_joint, mode, n_samples=16, generator=generator).laplace
+    result = variational_evidence(log_joint, mode, steps=1000, n_samples=512, generator=generator)
+    assert exact - laplace > 1.5
+    assert result.elbo < exact
+    assert result.importance == pytest.approx(exact, abs=0.1)
 
 
 def test_draws_the_model_rejects_carry_no_weight():

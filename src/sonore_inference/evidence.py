@@ -14,7 +14,13 @@ with the prior included:
   effective sample size says how well the proposal covers the posterior.
 
 The paper used variational inference followed by importance sampling
-[App. B.3]; the Laplace proposal here replaces the variational one.
+[App. B.3]. :func:`variational_evidence` does the same: a Gaussian is fitted
+to the posterior by maximizing the evidence lower bound (ELBO), then used as
+the importance-sampling proposal. It is slower than Laplace but does not
+assume the posterior is a smooth peak, which matters where the likelihood is
+rugged (milestone (b): small changes to an f0 trajectory shift the relative
+phase of harmonics sharing a cochleagram channel, so the curvature at the
+mode changes sign from point to point).
 """
 
 from __future__ import annotations
@@ -109,3 +115,94 @@ def log_evidence(
     normalized = torch.softmax(log_weights, 0)
     effective = (1 / (normalized**2).sum()).item()
     return Evidence(laplace, importance, effective, n_samples, peak, floored)
+
+
+@dataclass
+class VariationalEvidence:
+    elbo: float
+    importance: float
+    effective_sample_size: float
+    n_samples: int
+    elbo_history: list[float]
+
+
+def variational_evidence(
+    log_joint: Callable[[dict[str, torch.Tensor]], torch.Tensor],
+    mode: dict[str, torch.Tensor],
+    *,
+    steps: int = 2000,
+    learning_rate: float = 0.01,
+    n_draws: int = 10,
+    n_samples: int = 256,
+    generator: torch.Generator | None = None,
+    min_eigenvalue: float = 1e-2,
+) -> VariationalEvidence:
+    """ELBO and importance-sampling estimates of ``log p(sound | H)`` from a fitted Gaussian.
+
+    The Gaussian ``q`` is fitted in coordinates whitened by the Laplace
+    approximation at ``mode`` (absolute eigenvalues of the Hessian, raised to
+    at least ``min_eigenvalue``): ``theta = mode + W z``, with ``z`` Gaussian
+    with its own mean and independent scales, fitted by Adam on the ELBO with
+    ``n_draws`` reparameterized draws per step. Draws outside the prior's
+    support (log joint -inf) are left out of a step's average. ``elbo`` is the
+    mean of the last tenth of the steps' estimates, a lower bound on the log
+    evidence up to noise; ``importance`` uses ``q`` as the proposal.
+    """
+    vector, unflatten = flatten({name: value.detach() for name, value in mode.items()})
+
+    def flat_log_joint(flat):
+        return log_joint(unflatten(flat))
+
+    dimension = vector.numel()
+    hessian = torch.autograd.functional.hessian(lambda flat: -flat_log_joint(flat), vector)
+    eigenvalues, eigenvectors = torch.linalg.eigh(0.5 * (hessian + hessian.T))
+    curvature = eigenvalues.abs().clamp_min(min_eigenvalue)
+    whitening = eigenvectors * curvature.rsqrt()
+    log_det_whitening = -0.5 * curvature.log().sum().item()
+    mean = torch.zeros(dimension, dtype=vector.dtype, requires_grad=True)
+    log_scale = torch.zeros(dimension, dtype=vector.dtype, requires_grad=True)
+    optimizer = torch.optim.Adam([mean, log_scale], lr=learning_rate)
+    gaussian_entropy = 0.5 * dimension * (1 + math.log(2 * math.pi)) + log_det_whitening
+    history = []
+    for _ in range(steps):
+        optimizer.zero_grad()
+        noise = torch.randn(n_draws, dimension, generator=generator, dtype=vector.dtype)
+        draws = vector + (mean + noise * log_scale.exp()) @ whitening.T
+        values = []
+        for draw in draws:
+            with torch.no_grad():
+                inside = math.isfinite(flat_log_joint(draw).item())
+            if inside:
+                values.append(flat_log_joint(draw))
+        if not values:
+            continue
+        elbo = torch.stack(values).mean() + log_scale.sum() + gaussian_entropy
+        (-elbo).backward()
+        optimizer.step()
+        history.append(elbo.item())
+
+    with torch.no_grad():
+        scale = log_scale.exp()
+        noise = torch.randn(n_samples, dimension, generator=generator, dtype=vector.dtype)
+        latent = mean + noise * scale
+        # log q(theta) = log N(z; mean, diag(scale^2)) - log |det W|
+        log_q = (
+            -0.5 * (noise**2).sum(-1)
+            - log_scale.sum()
+            - 0.5 * dimension * math.log(2 * math.pi)
+            - log_det_whitening
+        )
+
+        def log_weight(z, log_q_z):
+            try:
+                return flat_log_joint(vector + whitening @ z) - log_q_z
+            except ValueError:
+                return torch.tensor(-math.inf, dtype=vector.dtype)
+
+        log_weights = torch.stack([log_weight(z, lq) for z, lq in zip(latent, log_q, strict=True)])
+    finite = torch.isfinite(log_weights)
+    log_weights = torch.where(finite, log_weights, torch.full_like(log_weights, -math.inf))
+    importance = (torch.logsumexp(log_weights, 0) - math.log(n_samples)).item()
+    effective = (1 / (torch.softmax(log_weights, 0) ** 2).sum()).item()
+    tail = history[-max(1, len(history) // 10) :]
+    return VariationalEvidence(sum(tail) / len(tail), importance, effective, n_samples, history)
