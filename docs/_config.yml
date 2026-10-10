@@ -1,0 +1,4 @@
+# GitHub Pages (Jekyll) settings for the docs/ folder. Pages is not enabled
+# yet; when it is, choose "Deploy from a branch", branch main, folder /docs.
+title: sonore-inference
+description: Inferring auditory scenes by inverting a generative model of sound

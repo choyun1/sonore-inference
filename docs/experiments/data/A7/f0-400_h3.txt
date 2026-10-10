@@ -1,0 +1,10 @@
+f0 400 Hz, harmonic 3 mistuned; 300 Adam steps, 128 samples, fft-bass-gain cochleagram, cosine phases, whistle timing inferred, trajectories, harmonic timing inferred (through sonore_inference.scene)
+log prior of structure: one source -2.05, two sources -4.54
+percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2  log_odds_laplace  log_odds_is  seconds  logZ1_elbo  logZ1_vi_is  ess1_vi  logZ2_elbo  logZ2_vi_is  ess2_vi  log_odds_elbo  log_odds_vi_is
+      0        -9957.5   -9964.2     5        -9968.6   -9974.7     3             -13.6        -13.0   1168.7     -9961.6      -9961.6       28     -9972.8      -9971.2        2          -13.6           -12.1
+      5        -9959.0   -9974.8     3        -9994.0   -9995.0     3             -37.5        -22.7    791.7     -9969.0      -9968.0       13     -9990.4      -9986.8        4          -23.9           -21.3
+     10        -9978.9   -9994.6     6        -9994.3   -9998.4     2             -17.8         -6.2    787.9     -9989.9      -9986.9        3     -9996.1      -9990.8        2           -8.7            -6.4
+     20       -10103.4  -10083.0     2       -10004.9  -10015.6     1              95.9         64.9    787.5    -10061.5     -10057.1        5    -10019.3     -10010.2        1           39.7            44.5
+     30       -10169.5  -10155.1    11       -10052.8  -10043.8     2             114.2        108.9    783.2    -10147.7     -10146.6       16    -10041.0     -10037.7        5          104.2           106.4
+     40       -10287.7  -10265.5     2       -10082.8  -10071.8     2             202.4        191.3    768.8    -10235.2     -10229.4        1    -10066.5     -10062.7        3          166.2           164.2
+     50       -10273.3  -10266.7    16       -10073.2  -10074.8     1             197.6        189.4    789.7    -10263.4     -10260.8        5    -10077.6     -10070.7        1          183.3           187.5

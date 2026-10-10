@@ -1,0 +1,30 @@
+300 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+control 200.0 Hz                    one@200      118    -2.05    -9955.4    -9959.0     4    0    -9904.1    264.8    -9959.5    -9959.5     5
+control 200.0 Hz                    one@100      130    -2.05   -10133.1   -25310.2     1    1   -10097.9    370.3   -10143.9   -10143.5     2
+control 200.0 Hz                    two          230    -5.23    -9946.0  -4290906.1     1    3    -9906.6    467.0    -9984.6    -9975.8     1
+control 200.0 Hz                    log odds vs best one (laplace): two 6.3
+control 200.0 Hz                    log odds vs best one (importance): two -4280950.3
+control 200.0 Hz                    log odds vs best one (elbo): two -28.3
+control 200.0 Hz                    log odds vs best one (variational): two -19.5
+control 282.8 Hz                    one@282.843    114    -2.05    -9956.4    -9957.8     4    0    -9900.7    248.4    -9957.5    -9957.6     8
+control 282.8 Hz                    one@100      130    -2.05   -10327.3   -10308.3     1    0   -10272.4    419.5   -10320.2   -10311.0     1
+control 282.8 Hz                    two          224    -5.23    -9945.4       -inf   nan    3    -9900.5    322.3    -9974.9    -9971.6     4
+control 282.8 Hz                    log odds vs best one (laplace): two 7.8
+control 282.8 Hz                    log odds vs best one (importance): two -inf
+control 282.8 Hz                    log odds vs best one (elbo): two -20.6
+control 282.8 Hz                    log odds vs best one (variational): two -17.1
+control 300.0 Hz                    one@300      114    -2.05    -9955.4    -9958.1    12    0    -9900.8    253.4    -9957.4    -9957.4    12
+control 300.0 Hz                    one@100      130    -2.05   -10336.6   -10330.7     2    0   -10290.4    345.1   -10333.6   -10332.1     1
+control 300.0 Hz                    two          224    -5.23    -9981.3    -9981.4     2    0    -9900.3    354.2    -9978.0    -9974.0     1
+control 300.0 Hz                    log odds vs best one (laplace): two -29.1
+control 300.0 Hz                    log odds vs best one (importance): two -26.5
+control 300.0 Hz                    log odds vs best one (elbo): two -23.8
+control 300.0 Hz                    log odds vs best one (variational): two -19.7
+control 400.0 Hz                    one@400      112    -2.05    -9953.4    -9955.5     7    0    -9898.7    251.6    -9955.0    -9954.8    33
+control 400.0 Hz                    one@100      130    -2.05   -10428.7  -5110197.4     1    3   -10414.3    395.3   -10467.7   -10462.5     1
+control 400.0 Hz                    two          221    -5.23    -9933.2       -inf   nan    4    -9896.3    540.3    -9988.5    -9977.8     4
+control 400.0 Hz                    log odds vs best one (laplace): two 17.0
+control 400.0 Hz                    log odds vs best one (importance): two -inf
+control 400.0 Hz                    log odds vs best one (elbo): two -36.7
+control 400.0 Hz                    log odds vs best one (variational): two -26.1

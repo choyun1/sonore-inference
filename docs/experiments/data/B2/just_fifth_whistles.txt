@@ -1,0 +1,7 @@
+300 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+just_fifth 0 ms                     whistles     542   -15.17   -10054.4   -10054.8     1    0    -9505.4    470.1   -10046.1   -10046.3     1
+just_fifth 10 ms                    whistles     542   -15.17   -10037.7       -inf   nan    4    -9506.1    521.2   -10057.5   -10053.9     3
+just_fifth 20 ms                    whistles     542   -15.17   -10036.2       -inf   nan    3    -9506.9    459.2   -10050.9   -10048.4     1
+just_fifth 40 ms                    whistles     542   -15.17   -10001.3       -inf   nan    7    -9507.3    493.7   -10064.6   -10050.7     1
+just_fifth 80 ms                    whistles     542   -15.17   -10038.6  -1936878.5     1    3    -9511.4    463.3   -10053.0   -10045.8     1

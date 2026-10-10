@@ -1,0 +1,22 @@
+3000 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds
+control 200.0 Hz                    one@200      118    -2.05    -9955.4    -9959.0     4    0    -9904.1     49.3
+control 200.0 Hz                    one@100      130    -2.05   -10140.1   -10142.4     5    0   -10094.3     89.6
+control 200.0 Hz                    two          230    -5.23    -9966.3    -9972.4     3    0    -9906.2     80.5
+control 200.0 Hz                    log odds vs best one (laplace): two -14.0
+control 200.0 Hz                    log odds vs best one (importance): two -16.6
+control 282.8 Hz                    one@282.843    114    -2.05    -9956.4    -9957.8     4    0    -9900.7     38.2
+control 282.8 Hz                    one@100      130    -2.05   -10317.0   -10305.9     1    0   -10263.4     89.6
+control 282.8 Hz                    two          224    -5.23    -9954.7       -inf   nan    1    -9900.0     62.4
+control 282.8 Hz                    log odds vs best one (laplace): two -1.5
+control 282.8 Hz                    log odds vs best one (importance): two -inf
+control 300.0 Hz                    one@300      114    -2.05    -9955.4    -9958.1    12    0    -9900.8     38.3
+control 300.0 Hz                    one@100      130    -2.05   -10333.3   -10329.7     2    0   -10287.2     91.3
+control 300.0 Hz                    two          224    -5.23    -9971.9    -9976.3     2    0    -9900.1     62.1
+control 300.0 Hz                    log odds vs best one (laplace): two -19.7
+control 300.0 Hz                    log odds vs best one (importance): two -21.3
+control 400.0 Hz                    one@400      112    -2.05    -9953.4    -9955.5     7    0    -9898.7     33.7
+control 400.0 Hz                    one@100      130    -2.05   -10460.9   -10456.9     2    0   -10411.3     89.2
+control 400.0 Hz                    two          221    -5.23    -9942.6       -inf   nan    2    -9895.8     54.0
+control 400.0 Hz                    log odds vs best one (laplace): two 7.6
+control 400.0 Hz                    log odds vs best one (importance): two -inf

@@ -1,0 +1,7 @@
+f0 200 Hz, harmonic 2 mistuned; 300 Adam steps, 128 samples
+log prior of structure: one source -2.05, two sources -4.54
+percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2  log_odds_laplace  log_odds_is  seconds
+      6        -9940.5   -9940.4   117        -9946.7   -9946.4    82              -8.7         -8.5     71.4
+      7        -9947.2   -9947.0   104        -9947.0   -9946.1    24              -2.3         -1.5     73.0
+      8        -9955.2   -9955.0    96        -9946.7   -9946.6    99               6.0          5.9     71.8
+      9        -9964.8   -9964.4    65        -9946.1   -9946.2   108              16.2         15.7     72.4

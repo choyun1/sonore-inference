@@ -1,0 +1,42 @@
+300 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+tritone_different_spectra 0 ms      one@282.843    114    -2.05   -10395.6   -10391.1     2    0   -10349.5    255.3   -10386.0   -10382.1     2
+tritone_different_spectra 0 ms      one@200      118    -2.05   -10061.8   -10063.0     6    0   -10012.1    265.1   -10063.7   -10061.6     1
+tritone_different_spectra 0 ms      one@100      130    -2.05   -10023.2  -244006.7     1    2    -9994.8    363.9   -10045.0   -10041.9     3
+tritone_different_spectra 0 ms      two          232    -5.23   -10000.5    -9999.4     4    0    -9908.8    398.1    -9995.9    -9994.7     1
+tritone_different_spectra 0 ms      log odds vs best one (laplace): two 19.6
+tritone_different_spectra 0 ms      log odds vs best one (importance): two 60.5
+tritone_different_spectra 0 ms      log odds vs best one (elbo): two 46.0
+tritone_different_spectra 0 ms      log odds vs best one (variational): two 44.0
+tritone_different_spectra 10 ms     one@282.843    114    -2.05   -10402.8   -10393.2     1    0   -10355.6    258.2   -10385.0   -10382.0     2
+tritone_different_spectra 10 ms     one@200      118    -2.05   -10062.3   -10060.1     2    0   -10009.6    276.7   -10061.1   -10060.7     3
+tritone_different_spectra 10 ms     one@100      130    -2.05   -10022.4  -482263.6     1    2    -9996.3    354.2   -10040.5   -10038.0     3
+tritone_different_spectra 10 ms     two          232    -5.23    -9998.4    -9997.8     3    0    -9908.7    389.1    -9994.2    -9995.6     3
+tritone_different_spectra 10 ms     log odds vs best one (laplace): two 20.9
+tritone_different_spectra 10 ms     log odds vs best one (importance): two 59.2
+tritone_different_spectra 10 ms     log odds vs best one (elbo): two 43.1
+tritone_different_spectra 10 ms     log odds vs best one (variational): two 39.2
+tritone_different_spectra 20 ms     one@282.843    114    -2.05   -10407.7   -10401.7     6    0   -10361.4    256.2   -10400.0   -10396.9     2
+tritone_different_spectra 20 ms     one@200      118    -2.05   -10060.1   -10058.9     3    0   -10007.4    267.1   -10059.3   -10059.3     5
+tritone_different_spectra 20 ms     one@100      130    -2.05   -10041.1   -10046.8     2    0    -9998.5    424.3   -10050.1   -10047.3     6
+tritone_different_spectra 20 ms     two          232    -5.23    -9998.5    -9997.5     6    0    -9908.7    394.0    -9994.7    -9994.2     4
+tritone_different_spectra 20 ms     log odds vs best one (laplace): two 39.4
+tritone_different_spectra 20 ms     log odds vs best one (importance): two 46.1
+tritone_different_spectra 20 ms     log odds vs best one (elbo): two 52.3
+tritone_different_spectra 20 ms     log odds vs best one (variational): two 50.0
+tritone_different_spectra 40 ms     one@282.843    114    -2.05   -10430.9   -10427.2     9    0   -10383.4    259.6   -10420.4   -10419.2     9
+tritone_different_spectra 40 ms     one@200      118    -2.05   -10059.6   -10055.8     1    0   -10005.5    267.6   -10057.9   -10056.7     3
+tritone_different_spectra 40 ms     one@100      130    -2.05   -10026.6  -10305061.3     1    3   -10009.5    378.1   -10054.2   -10053.4     2
+tritone_different_spectra 40 ms     two          232    -5.23    -9996.7    -9999.0     2    0    -9908.7    398.9    -9995.8    -9993.2     1
+tritone_different_spectra 40 ms     log odds vs best one (laplace): two 26.8
+tritone_different_spectra 40 ms     log odds vs best one (importance): two 53.6
+tritone_different_spectra 40 ms     log odds vs best one (elbo): two 55.3
+tritone_different_spectra 40 ms     log odds vs best one (variational): two 57.0
+tritone_different_spectra 80 ms     one@282.843    114    -2.05   -10468.6   -10464.5     3    0   -10422.9    255.8   -10462.0   -10458.2     2
+tritone_different_spectra 80 ms     one@200      118    -2.05   -10048.9   -10048.5     7    0    -9994.7    268.9   -10049.0   -10046.9     1
+tritone_different_spectra 80 ms     one@100      130    -2.05   -10070.2   -10063.3     1    0   -10022.7    358.6   -10067.7   -10065.0     1
+tritone_different_spectra 80 ms     two          232    -5.23    -9986.1   -69472.3     1    1    -9908.7    384.9    -9992.7    -9995.3     1
+tritone_different_spectra 80 ms     log odds vs best one (laplace): two 59.6
+tritone_different_spectra 80 ms     log odds vs best one (importance): two -59426.9
+tritone_different_spectra 80 ms     log odds vs best one (elbo): two 53.1
+tritone_different_spectra 80 ms     log odds vs best one (variational): two 48.4

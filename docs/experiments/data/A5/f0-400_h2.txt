@@ -1,0 +1,44 @@
+f0 400 Hz, harmonic 2 mistuned; 300 Adam steps, 128 samples, fft-bass-gain cochleagram, cosine phases, whistle timing inferred, trajectories, harmonic timing inferred
+log prior of structure: one source -2.05, two sources -4.54
+percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2  log_odds_laplace  log_odds_is  seconds
+      0        -9957.5   -9964.2     5        -9965.3  -10321.1     1             -10.3       -359.4     19.9
+         note: floored Hessian eigenvalues H1 0, H2 1
+      1        -9959.7   -9964.9     5        -9958.1      -inf   nan              -1.0         -inf     20.7
+         note: floored Hessian eigenvalues H1 0, H2 2
+      2        -9955.8   -9969.0     6        -9958.4  -72414.4     1              -5.0     -62447.9     19.8
+         note: floored Hessian eigenvalues H1 0, H2 1
+      3       -10002.1   -9982.7     1        -9990.1  -12048.4     1               9.6      -2068.2     19.9
+         note: floored Hessian eigenvalues H1 0, H2 1
+      4        -9974.5   -9971.2     6        -9999.6   -9992.7     1             -27.6        -24.0     19.7
+      5       -10002.4   -9986.0     2       -10000.2   -9999.5     1              -0.3        -15.9     18.7
+      6       -10002.5   -9989.8     2        -9998.8  -10000.1     4               1.2        -12.7     20.2
+      7        -9992.1   -9990.0     8        -9999.7   -9997.2     3             -10.0         -9.7     20.1
+      8       -10000.9   -9998.7     6        -9998.2   -9999.9     2               0.2         -3.7     19.6
+      9       -10025.7  -10013.5     8        -9999.6   -9997.1     2              23.6         13.9     19.4
+     10       -10013.1  -10015.8     2        -9997.4   -9997.9     5              13.2         15.4     19.5
+     12       -10026.7  -10041.0     5        -9998.1   -9999.0     3              26.2         39.5     20.2
+     14       -10058.3  -20517.0     1        -9997.9  -10001.0     8              57.9      10513.5     20.4
+         note: floored Hessian eigenvalues H1 1, H2 0
+     16       -10092.7  -10091.7     1       -10002.4  -10003.0     3              87.8         86.2     20.7
+     18       -10102.5  -79984.9     1       -10004.3  -10004.6     2              95.7      69977.8     21.2
+         note: floored Hessian eigenvalues H1 1, H2 0
+     20       -10146.4  -15122.8     1       -10008.0  -10011.9     6             136.0       5108.4     20.6
+         note: floored Hessian eigenvalues H1 1, H2 0
+     22       -10179.1  -16715.2     1       -10014.1  -10012.3     6             162.5       6700.5     20.6
+         note: floored Hessian eigenvalues H1 1, H2 0
+     24       -10191.5  -924347.3     1       -10002.5  -97351.9     1             186.4     826992.8     20.7
+         note: floored Hessian eigenvalues H1 3, H2 1
+     26       -10227.0  -858386.9     1       -10016.5  -10015.3     3             208.1     848369.1     20.8
+         note: floored Hessian eigenvalues H1 2, H2 0
+     28       -10243.4  -5269574.4     1       -10017.3  -10015.8     4             223.6    5259556.2     21.5
+         note: floored Hessian eigenvalues H1 3, H2 0
+     30       -10271.1  -19723878.1     1       -10019.1  -10020.2     5             249.5   19713855.4     21.0
+         note: floored Hessian eigenvalues H1 4, H2 0
+     35       -10389.5  -10376.6     3       -10020.1  -11131.7     1             367.0       -757.6     19.7
+         note: floored Hessian eigenvalues H1 0, H2 1
+     40       -10431.8  -10413.1     2       -10019.9  -51344.8     1             409.4     -40934.2     20.1
+         note: floored Hessian eigenvalues H1 0, H2 1
+     45       -10358.1  -12752264.6     1       -10028.2  -10032.9     3             327.5   12742229.3     20.0
+         note: floored Hessian eigenvalues H1 4, H2 0
+     50       -10344.0      -inf   nan       -10031.2  -10034.6     5             310.3          inf     20.5
+         note: floored Hessian eigenvalues H1 1, H2 0

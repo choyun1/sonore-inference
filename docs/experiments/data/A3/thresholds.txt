@@ -1,0 +1,15 @@
+left out: f0 100 Hz, harmonic 1, 1% (unreliable evidence estimate)
+left out: f0 100 Hz, harmonic 2, 0% (unreliable evidence estimate)
+left out: f0 100 Hz, harmonic 3, 0% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 2% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 5% (unreliable evidence estimate)
+f0_hz  harmonic  n_mistunings  threshold_laplace  threshold_is  p_two_at_max
+  100         1            24               15.0          14.9         1.000
+  100         2            24               50.0          50.0         0.009
+  100         3            24               50.0          50.0         0.000
+  200         1            25                7.4           7.2         1.000
+  200         2            25               13.5          13.2         1.000
+  200         3            23               22.8          22.4         1.000
+  400         1            25                3.6           3.5         1.000
+  400         2            25                7.9           7.7         1.000
+  400         3            25               12.9          12.6         1.000

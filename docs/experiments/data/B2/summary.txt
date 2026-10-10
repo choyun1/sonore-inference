@@ -1,0 +1,136 @@
+== laplace ==
+stimulus                                 two  whistles
+control 200.0 Hz                        6.2*          
+control 282.8 Hz                        7.8*          
+control 300.0 Hz                      -29.1           
+control 400.0 Hz                       17.0*          
+just_fifth 0 ms                        66.8*     -7.8*
+just_fifth 10 ms                       76.6      17.7*
+just_fifth 20 ms                       81.2      23.9*
+just_fifth 40 ms                       80.8*     58.2*
+just_fifth 80 ms                       69.1*      8.6*
+octave 0 ms                            -5.3           
+octave 10 ms                           -0.9           
+octave 20 ms                           -2.5           
+octave 40 ms                           -7.0           
+octave 80 ms                           -5.7           
+octave 120 ms                          -4.1           
+octave 160 ms                          -4.5           
+octave 240 ms                          -5.7           
+tritone 0 ms                           31.0    -174.8 
+tritone 10 ms                          35.7    -166.2 
+tritone 20 ms                          36.4    -163.8 
+tritone 40 ms                          43.6    -152.2 
+tritone 80 ms                          52.3    -140.7 
+tritone_different_spectra 0 ms         19.5*   -145.3*
+tritone_different_spectra 10 ms        20.8*   -140.0*
+tritone_different_spectra 20 ms        39.4    -120.5 
+tritone_different_spectra 40 ms        26.7*   -131.8*
+tritone_different_spectra 80 ms        59.6*   -102.7 
+  just_fifth: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  octave: Eqn 2 asynchrony threshold 234.2 ms over 0-240 ms
+  tritone: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  tritone_different_spectra: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+
+== importance ==
+stimulus                                 two  whistles
+control 200.0 Hz                    -4280950.3           
+control 282.8 Hz                       -inf           
+control 300.0 Hz                      -26.5           
+control 400.0 Hz                       -inf           
+just_fifth 0 ms                       371.3     311.6 
+just_fifth 10 ms                       63.7      -inf 
+just_fifth 20 ms                       60.6      -inf 
+just_fifth 40 ms                       68.9      -inf 
+just_fifth 80 ms                       81.7   -1926802.5 
+octave 0 ms                           -39.1           
+octave 10 ms                          -35.4           
+octave 20 ms                          -33.4           
+octave 40 ms                          -25.8           
+octave 80 ms                          -27.5           
+octave 120 ms                         -28.2           
+octave 160 ms                         -21.1           
+octave 240 ms                         -19.0           
+tritone 0 ms                           28.3    -158.4 
+tritone 10 ms                          33.0    -151.9 
+tritone 20 ms                          32.6    -152.7 
+tritone 40 ms                          47.2    -143.5 
+tritone 80 ms                          53.7    -125.8 
+tritone_different_spectra 0 ms         60.4     -84.1 
+tritone_different_spectra 10 ms        59.1     -84.5 
+tritone_different_spectra 20 ms        46.1     -95.3 
+tritone_different_spectra 40 ms        53.6     -86.1 
+tritone_different_spectra 80 ms     -59427.0     -87.1 
+  just_fifth: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  octave: Eqn 2 asynchrony threshold 240.0 ms over 0-240 ms
+  tritone: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  tritone_different_spectra: Eqn 2 asynchrony threshold 20.0 ms over 0-80 ms
+
+== elbo ==
+stimulus                                 two  whistles
+control 200.0 Hz                      -28.3           
+control 282.8 Hz                      -20.6           
+control 300.0 Hz                      -23.8           
+control 400.0 Hz                      -36.7           
+just_fifth 0 ms                        55.5       8.9 
+just_fifth 10 ms                       56.2      -3.1 
+just_fifth 20 ms                       58.7       6.4 
+just_fifth 40 ms                       63.6      -2.7 
+just_fifth 80 ms                       56.6      -0.2 
+octave 0 ms                           -37.7           
+octave 10 ms                          -38.0           
+octave 20 ms                          -34.4           
+octave 40 ms                          -34.7           
+octave 80 ms                          -29.9           
+octave 120 ms                         -33.0           
+octave 160 ms                         -26.7           
+octave 240 ms                         -26.0           
+tritone 0 ms                           33.1    -131.2 
+tritone 10 ms                          37.5    -125.3 
+tritone 20 ms                          40.2    -120.2 
+tritone 40 ms                          46.6    -112.5 
+tritone 80 ms                          57.0     -97.3 
+tritone_different_spectra 0 ms         45.9     -83.3 
+tritone_different_spectra 10 ms        43.1     -83.3 
+tritone_different_spectra 20 ms        52.2     -65.2 
+tritone_different_spectra 40 ms        55.2     -68.3 
+tritone_different_spectra 80 ms        53.1     -65.2 
+  just_fifth: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  octave: Eqn 2 asynchrony threshold 240.0 ms over 0-240 ms
+  tritone: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  tritone_different_spectra: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+
+== variational ==
+stimulus                                 two  whistles
+control 200.0 Hz                      -19.5           
+control 282.8 Hz                      -17.2           
+control 300.0 Hz                      -19.8           
+control 400.0 Hz                      -26.2           
+just_fifth 0 ms                        56.0       6.5 
+just_fifth 10 ms                       58.6       0.1 
+just_fifth 20 ms                       61.9       7.2 
+just_fifth 40 ms                       66.1      10.5 
+just_fifth 80 ms                       54.4       3.8 
+octave 0 ms                           -33.6           
+octave 10 ms                          -33.1           
+octave 20 ms                          -28.3           
+octave 40 ms                          -27.0           
+octave 80 ms                          -26.3           
+octave 120 ms                         -23.4           
+octave 160 ms                         -25.4           
+octave 240 ms                         -21.9           
+tritone 0 ms                           31.1    -115.4 
+tritone 10 ms                          35.7    -125.3 
+tritone 20 ms                          45.2    -115.6 
+tritone 40 ms                          48.4     -96.3 
+tritone 80 ms                          56.4     -99.6 
+tritone_different_spectra 0 ms         44.0     -77.4 
+tritone_different_spectra 10 ms        39.2     -89.6 
+tritone_different_spectra 20 ms        49.9     -68.8 
+tritone_different_spectra 40 ms        57.0     -65.7 
+tritone_different_spectra 80 ms        48.4     -57.0 
+  just_fifth: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  octave: Eqn 2 asynchrony threshold 240.0 ms over 0-240 ms
+  tritone: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+  tritone_different_spectra: Eqn 2 asynchrony threshold 0.0 ms over 0-80 ms
+

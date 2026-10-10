@@ -1,0 +1,7 @@
+300 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+tritone_different_spectra 0 ms      whistles     966   -32.54   -10138.0   -10116.6     1    0    -9077.5    697.2   -10097.8   -10088.8     1
+tritone_different_spectra 10 ms     whistles     966   -32.54   -10131.9   -10114.1     1    0    -9077.5    720.0   -10093.3   -10097.1     1
+tritone_different_spectra 20 ms     whistles     966   -32.54   -10131.1   -10111.6     1    0    -9077.5    713.0   -10084.8   -10085.6     1
+tritone_different_spectra 40 ms     whistles     966   -32.54   -10127.9   -10111.4     1    0    -9077.5    695.3   -10092.0   -10088.6     3
+tritone_different_spectra 80 ms     whistles     966   -32.54   -10121.1   -10105.1     1    0    -9077.5    688.6   -10083.7   -10073.4     2

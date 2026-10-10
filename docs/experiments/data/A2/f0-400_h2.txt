@@ -1,0 +1,52 @@
+f0 400 Hz, harmonic 2 mistuned; 300 Adam steps, 128 samples, fft cochleagram, cosine phases
+log prior of structure: one source -2.05, two sources -4.54
+percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2  log_odds_laplace  log_odds_is  seconds
+      0        -9920.0   -9920.1   120        -9927.1   -9926.8    10              -9.5         -9.2      5.4
+      1        -9921.1   -9921.0   116        -9928.6   -9927.2    11             -10.0         -8.7      4.3
+      2        -9922.5   -9922.4   111        -9928.7   -9928.4    17              -8.7         -8.4      4.3
+      3        -9924.7   -9924.9   113        -9931.4   -9931.1    13              -9.2         -8.6      4.4
+      4        -9928.3   -9928.6   113        -9935.2   -9934.9    15              -9.4         -8.9      4.3
+      5        -9934.0   -9933.9   118        -9940.7   -9940.0    38              -9.1         -8.6      4.2
+      6        -9940.9   -9940.9   124        -9939.2   -9938.4    29              -0.8          0.1      4.4
+Traceback (most recent call last):
+  File "/home/claude/sonore-inference/tools/compare_mistuned_harmonic.py", line 167, in <module>
+    main()
+  File "/home/claude/sonore-inference/tools/compare_mistuned_harmonic.py", line 148, in main
+    e2 = log_evidence(
+         ^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/src/sonore_inference/evidence.py", line 96, in log_evidence
+    log_weights = torch.stack([flat_log_joint(draw) - proposal.log_prob(draw) for draw in draws])
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/src/sonore_inference/evidence.py", line 96, in <listcomp>
+    log_weights = torch.stack([flat_log_joint(draw) - proposal.log_prob(draw) for draw in draws])
+                               ^^^^^^^^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/src/sonore_inference/evidence.py", line 73, in flat_log_joint
+    return log_joint(unflatten(flat))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/tools/compare_mistuned_harmonic.py", line 106, in <lambda>
+    gaussian_log_likelihood(observed, cochleagram(render(params))) + prior(params)
+                                                                     ^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/tools/compare_mistuned_harmonic.py", line 63, in prior_two
+    prior_one(params)
+  File "/home/claude/sonore-inference/tools/compare_mistuned_harmonic.py", line 57, in prior_one
+    + log_prior_spectrum(params["spectrum_db"], params["log_f0"].exp())
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/claude/sonore-inference/src/sonore_inference/priors.py", line 80, in log_prior_spectrum
+    return torch.distributions.MultivariateNormal(mean, covariance_matrix=covariance).log_prob(spectrum_db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/claude/.venv/lib/python3.11/site-packages/torch/distributions/multivariate_normal.py", line 189, in __init__
+    super().__init__(batch_shape, event_shape, validate_args=validate_args)
+  File "/home/claude/.venv/lib/python3.11/site-packages/torch/distributions/distribution.py", line 77, in __init__
+    raise ValueError(
+ValueError: Expected parameter covariance_matrix (Tensor of shape (10, 10)) of distribution MultivariateNormal(loc: torch.Size([10]), covariance_matrix: torch.Size([10, 10])) to satisfy the constraint PositiveDefinite(), but found invalid values:
+tensor([[nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+        [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]],
+       dtype=torch.float64)

@@ -1,0 +1,8 @@
+f0 400 Hz, harmonic 1 mistuned; 300 Adam steps, 128 samples
+log prior of structure: one source -2.05, two sources -4.54
+percent  logZ1_laplace  logZ1_is  ess1  logZ2_laplace  logZ2_is  ess2  log_odds_laplace  log_odds_is  seconds
+      1        -9922.7   -9922.6   124        -9917.6      -inf   nan               2.6         -inf     74.7
+         note: floored Hessian eigenvalues H1 0, H2 1
+      2        -9930.0   -9930.0   121        -9933.7   -9932.9    37              -6.1         -5.4     73.4
+      3        -9942.4   -9942.3   116        -9933.8   -9932.7    17               6.1          7.1     73.4
+      4        -9959.8   -9959.7   109        -9934.0   -9933.2    26              23.3         24.0     73.6

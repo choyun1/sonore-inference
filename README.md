@@ -6,7 +6,8 @@ sound (analysis by synthesis), building on Cusimano, Hewitt & McDermott (2024),
 [sonore](https://github.com/choyun1/sonore) as the NumPy reference that its
 renderers are tested against.
 
-Early design stage: see `docs/design/`. This project is developed with AI
+Early design stage: see `docs/design/`. Results so far, one page per
+computational experiment: `docs/experiments/`. This project is developed with AI
 assistance (Claude).
 
 MIT licence.

@@ -1,0 +1,58 @@
+left out: f0 100 Hz, harmonic 2, 2% (unreliable evidence estimate)
+left out: f0 100 Hz, harmonic 3, 5% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 1, 40% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 1, 45% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 1, 50% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 2, 2% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 2, 26% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 2, 28% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 2, 35% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 2, 50% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 0% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 1% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 2% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 3% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 7% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 8% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 45% (unreliable evidence estimate)
+left out: f0 200 Hz, harmonic 3, 50% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 1% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 4% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 12% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 14% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 18% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 22% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 24% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 1, 30% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 0% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 1% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 2% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 3% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 14% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 18% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 20% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 22% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 24% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 26% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 28% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 30% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 35% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 40% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 45% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 2, 50% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 1% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 2% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 4% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 9% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 16% (unreliable evidence estimate)
+left out: f0 400 Hz, harmonic 3, 22% (unreliable evidence estimate)
+f0_hz  harmonic  n_mistunings  threshold_laplace  threshold_is  p_two_at_max
+  100         1            25               26.6          26.2         1.000
+  100         2            24               50.0          50.0         0.000
+  100         3            24               50.0          50.0         0.000
+  200         1            22                8.2           8.4         1.000
+  200         2            20               15.7          15.0         1.000
+  200         3            17               24.8          25.0         1.000
+  400         1            17                4.0           4.0         1.000
+  400         2             9                6.8           8.5         1.000
+  400         3            19               13.0          12.4         1.000

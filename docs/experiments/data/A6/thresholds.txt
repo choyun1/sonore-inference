@@ -1,0 +1,24 @@
+f0 100 Hz, harmonic 1; paper's model (Fig. 7D, by eye): about 45% of f0
+percent   ELBO_h   ELBO_hw  ELBO_hwq  log_odds_bass  log_odds_ours
+      0    -98.0    -122.9    -114.7          -16.7          -17.2
+      5    -99.5    -121.6    -119.7          -20.3          -15.3
+     10   -107.1    -125.0    -124.3          -17.2          -16.9
+     20   -111.4    -124.4    -127.4          -13.0           -9.5
+     30   -120.6    -123.9    -134.2           -3.3            6.6
+     40   -132.9    -127.8    -125.5            7.3           17.1
+     50   -128.0    -138.7    -137.0           -9.0           23.5
+BASS run   threshold, BASS rule: 40.0   Eqn 2 rule: 39.6
+our model  threshold, BASS rule: 30.0   Eqn 2 rule: 25.0
+
+f0 200 Hz, harmonic 2; paper's model (Fig. 7D, by eye): about 20% of f0
+percent   ELBO_h   ELBO_hw  ELBO_hwq  log_odds_bass  log_odds_ours
+      0   -106.2    -128.8    -121.8          -15.6          -22.8
+      5   -111.8    -128.2    -127.3          -15.5          -14.9
+     10   -124.3    -128.0    -134.0           -3.7          -31.4
+     20   -168.9    -127.2    -125.8           43.1           21.7
+     30   -167.6    -128.1    -124.5           43.1           80.0
+     40   -171.5    -129.3    -126.6           44.9          133.9
+     50   -172.2    -127.9    -125.1           47.1          144.4
+BASS run   threshold, BASS rule: 20.0   Eqn 2 rule: 14.8
+our model  threshold, BASS rule: 20.0   Eqn 2 rule: 15.0
+

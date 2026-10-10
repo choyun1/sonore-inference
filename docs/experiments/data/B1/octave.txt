@@ -1,0 +1,32 @@
+3000 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds
+octave 0 ms                         one@400      112    -2.05   -10926.9   -10920.7    11    0   -10873.7     35.2
+octave 0 ms                         one@200      118    -2.05    -9977.0    -9977.5     2    0    -9925.0     51.3
+octave 0 ms                         one@100      130    -2.05   -10156.0   -10152.5     1    0   -10107.6     96.0
+octave 0 ms                         two          230    -5.23    -9978.7   -10012.9     2    0    -9906.2     83.7
+octave 0 ms                         log odds vs best one (laplace): two -4.9
+octave 0 ms                         log odds vs best one (importance): two -38.6
+octave 10 ms                        one@400      112    -2.05   -10934.0   -10927.8     6    0   -10880.7     33.9
+octave 10 ms                        one@200      118    -2.05    -9976.3    -9977.7     4    0    -9925.4     51.2
+octave 10 ms                        one@100      130    -2.05   -10152.8   -10153.1     1    0   -10105.5     92.4
+octave 10 ms                        two          230    -5.23    -9979.7   -10012.2     1    0    -9906.2     84.6
+octave 10 ms                        log odds vs best one (laplace): two -6.5
+octave 10 ms                        log odds vs best one (importance): two -37.6
+octave 20 ms                        one@400      112    -2.05   -10940.4   -10934.0     3    0   -10888.3     33.8
+octave 20 ms                        one@200      118    -2.05    -9967.5   -10000.0     1    1    -9926.0     52.6
+octave 20 ms                        one@100      130    -2.05   -10150.1   -10154.9     5    0   -10105.0     93.3
+octave 20 ms                        two          230    -5.23    -9980.0   -10009.0     1    0    -9906.2     82.7
+octave 20 ms                        log odds vs best one (laplace): two -15.7
+octave 20 ms                        log odds vs best one (importance): two -12.2
+octave 40 ms                        one@400      112    -2.05   -10950.3   -10944.2    17    0   -10897.2     34.0
+octave 40 ms                        one@200      118    -2.05    -9976.0    -9981.2     4    0    -9926.4     51.6
+octave 40 ms                        one@100      130    -2.05   -10152.2   -10154.3     5    0   -10106.1     93.3
+octave 40 ms                        two          230    -5.23    -9980.2   -10004.1     1    0    -9906.2     83.9
+octave 40 ms                        log odds vs best one (laplace): two -7.3
+octave 40 ms                        log odds vs best one (importance): two -26.1
+octave 80 ms                        one@400      112    -2.05   -10973.3   -10966.2     2    0   -10922.0     33.2
+octave 80 ms                        one@200      118    -2.05    -9977.6    -9981.4     3    0    -9926.0     51.2
+octave 80 ms                        one@100      130    -2.05   -10149.6   -10160.2     4    0   -10106.6     92.5
+octave 80 ms                        two          230    -5.23    -9980.1   -10005.6     2    0    -9906.2     80.9
+octave 80 ms                        log odds vs best one (laplace): two -5.7
+octave 80 ms                        log odds vs best one (importance): two -27.4

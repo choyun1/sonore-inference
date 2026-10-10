@@ -1,0 +1,37 @@
+3000 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds
+just_fifth 0 ms                     one@300      114    -2.05   -10387.3   -10379.5     1    0   -10335.0     39.9
+just_fifth 0 ms                     one@200      118    -2.05   -10083.3   -10084.5     6    0   -10031.3     50.3
+just_fifth 0 ms                     one@100      130    -2.05   -10063.1   -10065.5     5    0   -10015.5     95.9
+just_fifth 0 ms                     two          232    -5.23    -9989.7   -10005.0     2    0    -9908.4     88.0
+just_fifth 0 ms                     whistles     542   -15.17   -10029.6  -3886061.7     1    2    -9505.3    112.9
+just_fifth 0 ms                     log odds vs best one (laplace): two 70.2, whistles 20.4
+just_fifth 0 ms                     log odds vs best one (importance): two 57.3, whistles -3876009.3
+just_fifth 10 ms                    one@300      114    -2.05   -10391.4   -10386.7     5    0   -10339.8     38.6
+just_fifth 10 ms                    one@200      118    -2.05   -10082.7   -10081.3     4    0   -10029.6     50.3
+just_fifth 10 ms                    one@100      130    -2.05   -10062.5   -10067.8     2    0   -10016.3     87.6
+just_fifth 10 ms                    two          232    -5.23    -9988.7   -10002.1     2    0    -9908.4     87.7
+just_fifth 10 ms                    whistles     542   -15.17   -10056.6   -10717.5     1    1    -9505.8    113.3
+just_fifth 10 ms                    log odds vs best one (laplace): two 70.6, whistles -7.2
+just_fifth 10 ms                    log odds vs best one (importance): two 62.6, whistles -662.8
+just_fifth 20 ms                    one@300      114    -2.05   -10409.0   -10398.5     1    0   -10356.6     38.5
+just_fifth 20 ms                    one@200      118    -2.05   -10082.0   -10080.3     5    0   -10028.0     48.9
+just_fifth 20 ms                    one@100      130    -2.05   -10067.9   -10065.9     1    0   -10019.1     88.2
+just_fifth 20 ms                    two          232    -5.23    -9988.8   -10004.1     2    0    -9908.4     87.6
+just_fifth 20 ms                    whistles     542   -15.17   -10048.4   -28856.1     1    2    -9506.3    110.6
+just_fifth 20 ms                    log odds vs best one (laplace): two 75.9, whistles 6.4
+just_fifth 20 ms                    log odds vs best one (importance): two 58.6, whistles -18803.3
+just_fifth 40 ms                    one@300      114    -2.05   -10430.1   -10422.8     1    0   -10378.3     38.4
+just_fifth 40 ms                    one@200      118    -2.05   -10077.6   -10075.5     7    0   -10023.6     50.7
+just_fifth 40 ms                    one@100      130    -2.05   -10075.8   -10075.2     1    0   -10026.8     83.9
+just_fifth 40 ms                    two          232    -5.23    -9988.6   -10003.3     2    0    -9908.4     81.6
+just_fifth 40 ms                    whistles     542   -15.17   -10041.2   -42873.3     1    2    -9507.0    111.3
+just_fifth 40 ms                    log odds vs best one (laplace): two 83.9, whistles 21.4
+just_fifth 40 ms                    log odds vs best one (importance): two 68.7, whistles -32811.3
+just_fifth 80 ms                    one@300      114    -2.05   -10470.3   -10862.1     1    1   -10427.1     38.3
+just_fifth 80 ms                    one@200      118    -2.05   -10068.5   -10064.6     3    0   -10012.4     48.8
+just_fifth 80 ms                    one@100      130    -2.05   -10079.0   -17256.7     1    1   -10039.7     85.2
+just_fifth 80 ms                    two          232    -5.23    -9988.0   -10004.2     4    0    -9908.4     85.2
+just_fifth 80 ms                    whistles     542   -15.17   -10064.1   -10070.6     3    0    -9511.3    110.1
+just_fifth 80 ms                    log odds vs best one (laplace): two 77.3, whistles -8.7
+just_fifth 80 ms                    log odds vs best one (importance): two 57.2, whistles -19.1

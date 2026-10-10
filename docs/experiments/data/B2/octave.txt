@@ -1,0 +1,42 @@
+300 Adam steps, 128 samples, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+octave 0 ms                         one@400      112    -2.05   -10921.8   -11144.0     1    1   -10880.9    250.6   -10912.5   -10907.8     3
+octave 0 ms                         one@200      118    -2.05    -9976.6    -9977.0     2    0    -9925.1    269.8    -9979.4    -9978.4     2
+octave 0 ms                         one@100      130    -2.05   -10148.7   -10754.1     1    1   -10111.6    489.2   -10160.6   -10157.5     5
+octave 0 ms                         two          230    -5.23    -9978.7   -10012.9     2    0    -9906.2    428.0   -10013.9   -10008.8     2
+octave 0 ms                         log odds vs best one (laplace): two -5.2
+octave 0 ms                         log odds vs best one (importance): two -39.0
+octave 0 ms                         log odds vs best one (elbo): two -37.7
+octave 0 ms                         log odds vs best one (variational): two -33.5
+octave 10 ms                        one@400      112    -2.05   -10903.3  -18476351.5     1    4   -10889.0    267.2   -10921.9   -10914.1     4
+octave 10 ms                        one@200      118    -2.05    -9982.0    -9980.0     1    0    -9925.6    266.5    -9980.1    -9978.3     2
+octave 10 ms                        one@100      130    -2.05   -10157.0   -10155.2     1    0   -10109.4    353.9   -10154.5   -10156.2     2
+octave 10 ms                        two          230    -5.23    -9979.7   -10012.2     1    0    -9906.2    452.4   -10014.9   -10008.2     2
+octave 10 ms                        log odds vs best one (laplace): two -0.8
+octave 10 ms                        log odds vs best one (importance): two -35.3
+octave 10 ms                        log odds vs best one (elbo): two -37.9
+octave 10 ms                        log odds vs best one (variational): two -33.0
+octave 20 ms                        one@400      112    -2.05   -10915.0  -2844213.9     1    3   -10892.3    245.7   -10927.6   -10923.2     2
+octave 20 ms                        one@200      118    -2.05    -9980.7    -9978.8     3    0    -9926.1    264.0    -9980.9    -9980.7     6
+octave 20 ms                        one@100      130    -2.05   -10154.8   -10156.4     3    0   -10109.0    346.5   -10155.1   -10153.5     1
+octave 20 ms                        two          230    -5.23    -9980.0   -10009.0     1    0    -9906.2    478.1   -10012.1   -10005.8     1
+octave 20 ms                        log odds vs best one (laplace): two -2.5
+octave 20 ms                        log odds vs best one (importance): two -33.4
+octave 20 ms                        log odds vs best one (elbo): two -34.4
+octave 20 ms                        log odds vs best one (variational): two -28.4
+octave 40 ms                        one@400      112    -2.05   -10938.1  -249641.1     1    2   -10905.2    242.8   -10935.2   -10931.0     2
+octave 40 ms                        one@200      118    -2.05    -9976.4    -9981.5     4    0    -9926.6    261.8    -9982.0    -9979.6     3
+octave 40 ms                        one@100      130    -2.05   -10156.6   -10154.6     1    0   -10110.0    347.3   -10155.1   -10155.6     1
+octave 40 ms                        two          230    -5.23    -9980.2   -10004.1     1    0    -9906.2    484.2   -10013.5   -10003.4     1
+octave 40 ms                        log odds vs best one (laplace): two -6.9
+octave 40 ms                        log odds vs best one (importance): two -25.8
+octave 40 ms                        log odds vs best one (elbo): two -34.7
+octave 40 ms                        log odds vs best one (variational): two -27.0
+octave 80 ms                        one@400      112    -2.05   -10973.1   -10968.8     9    0   -10923.8    228.6   -10956.1   -10947.5     1
+octave 80 ms                        one@200      118    -2.05    -9977.6    -9981.3     3    0    -9926.1    260.6    -9982.3    -9981.3     5
+octave 80 ms                        one@100      130    -2.05   -10155.6   -10151.8     1    0   -10110.5    347.1   -10155.3   -10153.4     2
+octave 80 ms                        two          230    -5.23    -9980.1   -10005.6     2    0    -9906.2    479.6   -10009.0   -10004.4     3
+octave 80 ms                        log odds vs best one (laplace): two -5.7
+octave 80 ms                        log odds vs best one (importance): two -27.5
+octave 80 ms                        log odds vs best one (elbo): two -29.9
+octave 80 ms                        log odds vs best one (variational): two -26.3
