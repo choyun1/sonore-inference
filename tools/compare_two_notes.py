@@ -156,6 +156,9 @@ def main():
     )
     parser.add_argument("--samples", type=int, default=128)
     parser.add_argument(
+        "--seed", type=int, default=0, help="seed for the evidence's sampling (fits are deterministic)"
+    )
+    parser.add_argument(
         "--sigma", type=float, default=10.0, help="likelihood SD [dB] (BASS's value by default)"
     )
     args = parser.parse_args()
@@ -167,7 +170,7 @@ def main():
         parser.error("give --interval or --controls")
     cochleagram = FFTCochleagram()
     print(
-        f"{args.steps} Adam steps, {args.samples} samples, sigma {args.sigma:g} dB, "
+        f"{args.steps} Adam steps, {args.samples} samples, sigma {args.sigma:g} dB, seed {args.seed}, "
         "fft-bass-gain cochleagram, trajectories, all timing inferred"
     )
     print(
@@ -186,7 +189,7 @@ def main():
             if args.only and hypothesis not in args.only:
                 continue
             begin = time.perf_counter()
-            generator = torch.Generator().manual_seed(0)
+            generator = torch.Generator().manual_seed(args.seed)
             result = evaluate(
                 scene,
                 starts,
