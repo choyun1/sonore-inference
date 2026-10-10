@@ -259,12 +259,66 @@ class BlockPower:
                 energy = energy.index_add(0, torch.arange(rows) + offset + 1, by_offset[offset + 1])
         return energy[1 : self.n_bands + 1]
 
+    # Derivatives of source_energy with respect to the cell levels, for the
+    # Laplace approximation (docs/design/source-reverb.md, R5), where
+    # autograd's Hessian takes about a minute. Each product of two amplitudes
+    # is P = exp(kappa (l_x + l_y)), kappa = ln 10 / 20, so dP/dl_x = dP/dl_y
+    # = kappa P and every second derivative in (l_x, l_y) is kappa^2 P.
+
+    def _cells_and_products(self, levels_db: torch.Tensor):
+        """For each term of ``_TERMS``: flat indices of its two cells (x, y),
+        each ``(rows, n_k)``, their products of amplitudes, and its response."""
+        amplitude = 10 ** (levels_db.detach().to(torch.float64) / 20)
+        index = torch.arange(self.n_bands * self.n_windows).reshape(self.n_bands, self.n_windows)
+        terms = zip(self._TERMS, self._responses_to_products, strict=True)
+        for (band_step, window_step, _), response in terms:
+            n_k = self.n_windows - abs(window_step)
+            first = max(0, -window_step)
+            rows = self.n_bands - band_step
+            x = index[:rows, first : first + n_k]
+            y = index[band_step : band_step + rows, first + window_step : first + window_step + n_k]
+            yield x, y, amplitude.reshape(-1)[x] * amplitude.reshape(-1)[y], response
+
+    def source_energy_jacobian(self, levels_db: torch.Tensor) -> torch.Tensor:
+        """``d source_energy / d levels_db``, ``(n_bands, n_blocks, n_bands * n_windows)``
+        (cells flattened band-major)."""
+        kappa = math.log(10) / 20
+        n_cells = self.n_bands * self.n_windows
+        out = torch.zeros((self.n_bands + 3) * self.n_blocks * n_cells, dtype=torch.float64)
+        blocks = torch.arange(self.n_blocks)
+        for x, y, products, response in self._cells_and_products(levels_db):
+            rows = torch.arange(x.shape[0])[:, None, None, None]
+            offsets = torch.arange(4)[None, None, :, None]
+            values = (kappa * products[:, :, None, None] * response).reshape(-1)
+            out_row = ((rows + offsets) * self.n_blocks + blocks) * n_cells
+            for cell in (x, y):
+                out.index_add_(0, (out_row + cell[:, :, None, None]).reshape(-1), values)
+        out = out.reshape(self.n_bands + 3, self.n_blocks, n_cells)
+        return out[1 : self.n_bands + 1]
+
+    def source_energy_curvature(self, levels_db: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
+        """``sum_bj weights[b, j] d^2 source_energy[b, j] / d levels_db^2``,
+        ``(n_cells, n_cells)``, for weights ``(n_bands, n_blocks)``."""
+        kappa = math.log(10) / 20
+        n_cells = self.n_bands * self.n_windows
+        padded = torch.zeros(self.n_bands + 3, self.n_blocks, dtype=torch.float64)
+        padded[1 : self.n_bands + 1] = weights
+        out = torch.zeros(n_cells * n_cells, dtype=torch.float64)
+        for x, y, products, response in self._cells_and_products(levels_db):
+            rows = x.shape[0]
+            reached = torch.stack([padded[offset : offset + rows] for offset in range(4)], 1)
+            q = (kappa**2 * products * torch.einsum("ckoj,coj->ck", response, reached)).reshape(-1)
+            x, y = x.reshape(-1), y.reshape(-1)
+            for i, j in ((x, x), (y, y), (x, y), (y, x)):
+                out.index_add_(0, i * n_cells + j, q)
+        return out.reshape(n_cells, n_cells)
+
     def reverberant(self, source: torch.Tensor, gain: torch.Tensor) -> torch.Tensor:
         """Source energy ``(n_bands, n_blocks)`` convolved block by block with
         a room's expected gain ``(n_bands, n_blocks)``."""
         n = self.n_blocks
         spectrum = torch.fft.rfft(source, n=2 * n) * torch.fft.rfft(gain, n=2 * n)
-        return torch.fft.irfft(spectrum, n=2 * n)[:, :n]
+        return torch.fft.irfft(spectrum, n=2 * n)[..., :n]
 
 
 # Single renders against the model at experiment (a)'s setting (RT60 0.4 s,
