@@ -251,7 +251,11 @@ Two things are open:
    10 dB, larger in low bands; step 2's room gain is corrected to a
    block-to-block transfer. At a 20 dB floor one sound barely constrains
    RT60, which matters for (b)'s 20 dB floor.)*
-4. Survey download and RT60 prior fit (R8).
+4. Survey download and RT60 prior fit (R8). *(Done on 270 survey IRs: a
+   gamma, shape 1.97 and scale 0.220 s (median 0.362 s), beat the lognormal
+   (median 0.329 s, sigma 0.80) by 18 AIC, so the prior is gamma, pending
+   Cho; 11% of spaces are below 0.1 s. Median DRR 9.9 dB, which confirms
+   R2's typical 10 dB.)*
 5. Laplace grid (R5); experiment (a).
 6. Experiment (b).
 

@@ -83,3 +83,13 @@ def test_block_transfer_is_the_decay_weighted_by_a_triangle():
         for d in range(12):
             weight = np.clip(1 - np.abs(t - d * 0.01) / 0.01, 0, None)
             assert fast[i, d] == pytest.approx(np.sum(echo * weight) * step, rel=1e-4, abs=1e-12)
+
+
+def test_rt60_prior_is_the_gamma_density():
+    from scipy import stats
+
+    from sonore_inference.room import RT60_PRIOR_SCALE_S, RT60_PRIOR_SHAPE, log_prior_rt60
+
+    rt60 = np.array([0.05, 0.2, 0.4, 1.0, 2.5])
+    expected = stats.gamma.logpdf(rt60, RT60_PRIOR_SHAPE, scale=RT60_PRIOR_SCALE_S)
+    np.testing.assert_allclose(log_prior_rt60(torch.from_numpy(rt60)).numpy(), expected, rtol=1e-12)
