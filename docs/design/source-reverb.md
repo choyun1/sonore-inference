@@ -1,6 +1,6 @@
 # Source and room inference: design document
 
-Status: **draft for Cho**, written 2026-10-10; R1 updated the same day for sonore's `gaussian_spectrogram`. AI-assisted (Claude), from
+Status: **accepted by Cho on 2026-10-10** (R1 to R8 as recommended; see §7). Written 2026-10-10; R1 updated the same day for sonore's `gaussian_spectrogram`. AI-assisted (Claude), from
 HANDOFF-source-reverb.md, the 2017-18 archive, McDermott, Wrobleski & Oxenham
 (2011) and the evaluation of the same date. No library code until Cho accepts
 this.
@@ -238,7 +238,7 @@ Two things are open:
 
 ## 5. Order of work after acceptance
 
-1. Pin sonore at a release that has `gaussian_spectrogram`. Write core's
+1. Pin sonore at a commit that has `gaussian_spectrogram` (§7). Write core's
    matching prior (R1), with a covariance parity test, and redo probe 4 at
    sonore's defaults.
 2. Expected-energy model (R2/R3) with tests against `band_rt60s` and
@@ -256,6 +256,15 @@ Each step is one PR and one row in the step record.
 1. Accept, or change, R1 to R8.
 2. When step 4 arrives, run the survey download on your machine. This
    container cannot reach mcdermottlab.mit.edu.
+
+## 7. Decisions as accepted (2026-10-10)
+
+Cho accepted R1 to R8 as recommended. There is no plan yet for a sonore
+0.6.0 release, so the `stimuli` and `dev` extras pin sonore to its main
+branch at commit a1cd2b2 (`sonore @ git+https://github.com/choyun1/sonore@a1cd2b2...`,
+full hash in `pyproject.toml`). This needs hatchling's
+`allow-direct-references`. Core still never imports sonore. The pin moves
+to a PyPI version when one with `gaussian_spectrogram` exists.
 
 ## References
 
