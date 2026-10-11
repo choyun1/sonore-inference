@@ -86,19 +86,20 @@ def log_prior_structure(source_types: list[str], duration: float) -> float:
     """Log prior of a scene's discrete structure: how many sources, their types, one event each.
 
     ``source_types`` is the unordered list of types, e.g. ``["harmonic", "whistle"]``.
-    The number of sources is zero-truncated Poisson(rate * duration). Sources
-    are exchangeable, so a set of types counts every order in which they can
-    be drawn (the multinomial coefficient).
+    The number of sources is zero-truncated Poisson(rate * duration). A fitted
+    hypothesis is one mode with labelled sources; every permutation of the
+    labels is another mode of equal mass that the same hypothesis includes,
+    so the prior counts all n! labellings (design C6). For sources of the same
+    type this is more than the number of type orders.
     """
     n = len(source_types)
     rate = SOURCES_PER_SECOND * duration
     log_poisson = n * math.log(rate) - rate - math.lgamma(n + 1)
     log_truncation = -math.log1p(-math.exp(-rate))
-    counts = [source_types.count(kind) for kind in set(source_types)]
-    log_orders = math.lgamma(n + 1) - sum(math.lgamma(count + 1) for count in counts)
+    log_labellings = math.lgamma(n + 1)
     log_types = -n * math.log(N_SOURCE_TYPES)
     log_one_event_each = n * math.log(EVENTS_GEOMETRIC_P)
-    return log_poisson + log_truncation + log_orders + log_types + log_one_event_each
+    return log_poisson + log_truncation + log_labellings + log_types + log_one_event_each
 
 
 TIMING_NORMAL_GAMMA = dict(mu=-1.0, lam=0.5, alpha=2.5, beta=1.0)
