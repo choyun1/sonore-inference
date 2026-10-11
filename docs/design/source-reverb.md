@@ -277,6 +277,12 @@ full hash in `pyproject.toml`). This needs hatchling's
 `allow-direct-references`. Core still never imports sonore. The pin moves
 to a PyPI version when one with `gaussian_spectrogram` exists.
 
+**Update 2026-10-11:** sonore 0.6.0 is on PyPI with `gaussian_spectrogram`,
+so the extras now pin `sonore==0.6.0` and `allow-direct-references` is gone.
+Between commit a1cd2b2 and 0.6.0 sonore only added linear prediction and
+formant tracks (`sonore.views.lpc`, plotting for them) and bumped its version
+string; nothing this package uses changed.
+
 ## References
 
 - McDermott, J. H., Wrobleski, D., & Oxenham, A. J. (2011). Recovering
