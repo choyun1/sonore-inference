@@ -34,7 +34,9 @@ Source = "https://github.com/choyun1/sonore-inference"
 # under us. 0.6.0 is the first release with gaussian_spectrogram
 # (docs/design/source-reverb.md section 7).
 stimuli = ["sonore==0.6.0"]
-dev = ["pytest>=8", "ruff>=0.5", "sonore==0.6.0"]
+# Scene.model() hands a scene to Pyro (design C7); the core never needs it.
+pyro = ["pyro-ppl>=1.9"]
+dev = ["pytest>=8", "ruff>=0.5", "sonore==0.6.0", "pyro-ppl>=1.9"]
 
 [tool.hatch.version]
 path = "src/sonore_inference/__init__.py"

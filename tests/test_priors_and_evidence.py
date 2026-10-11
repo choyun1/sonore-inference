@@ -86,7 +86,7 @@ def test_structure_prior_matches_sampling_from_the_generative_model():
     events = rng.geometric(0.5, size=(int(two.sum()), 2))
     x = rng.uniform(0, 2, size=(int(two.sum()), 2))
     whistles = (types == 0).all(axis=1) & (events == 1).all(axis=1)
-    split = (np.floor(x[:, 0]) != np.floor(x[:, 1]))
+    split = np.floor(x[:, 0]) != np.floor(x[:, 1])
     sampled = (whistles & split).sum() / n.size
     expected = math.exp(log_prior_structure(["whistle", "whistle"], duration)) * 0.5 * 0.5
     assert sampled == pytest.approx(expected, rel=0.06)
