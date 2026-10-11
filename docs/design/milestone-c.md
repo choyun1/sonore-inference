@@ -1,9 +1,10 @@
 # Milestone (c): scene grammar — design
 
-Status: **draft, for Cho's review.** Written 2026-10-10. AI-assisted (Claude),
+Status: **accepted by Cho on 2026-10-11** (C1 to C10 as recommended, C7 as
+revised for Pyro; see §7). Written 2026-10-10. AI-assisted (Claude),
 from design v1 (D3, D5, D8), milestone (b)'s design and results, the scene
 module (`src/sonore_inference/scene.py`, `priors.py`) and Appendices A–C of
-the paper. No library code until Cho accepts this.
+the paper.
 
 **How numbers are marked.**
 
@@ -412,3 +413,9 @@ Each step is one PR; nothing past step 1 starts before Cho accepts this.
    (recommended: yes)
 10. **C10** Screen by MAP and Laplace, final by variational evidence?
     (recommended: yes)
+
+## 7. Decisions as accepted (2026-10-11)
+
+Cho accepted C1 to C10 as recommended. On C7, Cho first asked to keep the
+option of plugging into Pyro later. C7 was revised to add the Pyro-ready
+option (C), and Cho chose it.
