@@ -136,6 +136,7 @@ def variational_evidence(
     n_samples: int = 256,
     generator: torch.Generator | None = None,
     min_eigenvalue: float = 1e-2,
+    report: Callable[[str], None] | None = None,
 ) -> VariationalEvidence:
     """ELBO and importance-sampling estimates of ``log p(sound | H)`` from a fitted Gaussian.
 
@@ -147,6 +148,7 @@ def variational_evidence(
     support (log joint -inf) are left out of a step's average. ``elbo`` is the
     mean of the last tenth of the steps' estimates, a lower bound on the log
     evidence up to noise; ``importance`` uses ``q`` as the proposal.
+    ``report``, if given, receives a progress message every tenth of the steps.
     """
     vector, unflatten = flatten({name: value.detach() for name, value in mode.items()})
 
@@ -164,7 +166,9 @@ def variational_evidence(
     optimizer = torch.optim.Adam([mean, log_scale], lr=learning_rate)
     gaussian_entropy = 0.5 * dimension * (1 + math.log(2 * math.pi)) + log_det_whitening
     history = []
-    for _ in range(steps):
+    for step in range(steps):
+        if report and step % max(1, steps // 10) == 0:
+            report(f"variational fit, step {step}/{steps}")
         optimizer.zero_grad()
         noise = torch.randn(n_draws, dimension, generator=generator, dtype=vector.dtype)
         draws = vector + (mean + noise * log_scale.exp()) @ whitening.T
@@ -181,6 +185,8 @@ def variational_evidence(
         optimizer.step()
         history.append(elbo.item())
 
+    if report:
+        report(f"importance sampling from the variational fit ({n_samples} samples)")
     with torch.no_grad():
         scale = log_scale.exp()
         noise = torch.randn(n_samples, dimension, generator=generator, dtype=vector.dtype)

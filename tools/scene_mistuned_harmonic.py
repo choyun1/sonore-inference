@@ -9,6 +9,7 @@ the same table, so the two outputs can be compared line by line.
 """
 
 import argparse
+import sys
 import time
 
 import torch
@@ -18,6 +19,11 @@ from sonore_inference.scene import Harmonic, Scene, SceneTiming, Whistle, evalua
 from sonore_inference.stimuli import mistuned_harmonic as mh
 
 TIMING = SceneTiming(fs=mh.FS, total_duration=mh.DURATION + 2 * mh.PADDING, ramp=mh.RAMP)
+
+
+def status(prefix):
+    """A ``report`` for ``evaluate`` that writes progress to stderr (read by tools/run_seeds.py)."""
+    return lambda message: print(f"status: {prefix}: {message}", file=sys.stderr, flush=True)
 
 
 def variational_columns(r1, r2):
@@ -99,6 +105,7 @@ def main():
             n_samples=args.samples,
             generator=generator,
             variational_steps=args.variational_steps,
+            report=status(f"{percent:g}%, one source"),
         )
         r2 = evaluate(
             two,
@@ -109,6 +116,7 @@ def main():
             n_samples=args.samples,
             generator=generator,
             variational_steps=args.variational_steps,
+            report=status(f"{percent:g}%, harmonic plus whistle"),
         )
         e1, e2 = r1.evidence, r2.evidence
         odds_laplace = r2.log_posterior_laplace - r1.log_posterior_laplace

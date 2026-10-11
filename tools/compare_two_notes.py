@@ -27,6 +27,7 @@ alternative), by the Laplace and the importance-sampling estimates.
 
 import argparse
 import math
+import sys
 import time
 
 import torch
@@ -133,6 +134,11 @@ def hypotheses(condition):
     return out
 
 
+def status(prefix):
+    """A ``report`` for ``evaluate`` that writes progress to stderr (read by tools/run_seeds.py)."""
+    return lambda message: print(f"status: {prefix}: {message}", file=sys.stderr, flush=True)
+
+
 def label(condition):
     if condition["interval"] == "control":
         return f"control {condition['f0']:.1f} Hz"
@@ -205,6 +211,7 @@ def main():
                 generator=generator,
                 variational_steps=args.variational_steps,
                 sigma=args.sigma,
+                report=status(hypothesis),
             )
             results[hypothesis] = result
             e = result.evidence
