@@ -132,6 +132,12 @@ reproduce exactly.
   tempo would not appear [estimate: reasoning from the kernel, not run]. It is
   also the untried item from (a): the 100 Hz first-harmonic threshold (26.6%
   against the paper's ~45%) has never been run with σ and ℓ inferred.
+- The (b) octave is a second test case for (B). At SD 5 and 10 dB it stays
+  one source, and one source follows about half of the upper note's late
+  6 dB step through its level trajectory [measured:
+  results/two_notes/sigma5/README.md]. A shorter level-GP ℓ would make that
+  cheaper, so inferring ℓ should push the octave further toward one source.
+  That is the (b) thread's reading and has not been run.
 - (D), because it is exact, removes two latents per pair, and is what the
   current code already does for m = 1. The paper infers them by variational
   inference instead, which (D) does exactly.
@@ -194,9 +200,11 @@ sources share a type. BASS multiplies by neither (`model/scene.py:181-189`)
 (one harmonic and at most one whistle). For (b) it raises two notes over one
 by log 2 = 0.69, and the harmonic-plus-whistles hypothesis by log 8! = 10.6
 at the tritones (8 whistles) and log 4! = 3.2 at the just fifth (4 whistles)
-[computed from the formula, not re-run]. Neither changes a conclusion of (b):
-the just fifth's whistles move from +0.1..+10.5 to about +3.3..+13.7 over one
-note, still about 47 to 57 below two notes. For (c) it matters more: one stream of
+[computed from the formula, not re-run]. None changes a conclusion of (b).
+Across seeds 0 to 4, the evidence estimates vary by an SD of 2 to 5
+[measured: results/two_notes/seeds/README.md], so the 0.69 and 3.2 shifts
+are below that noise. The just fifth's whistles against one source is a tie
+across seeds, and two notes beat both by about 50. For (c) it matters more: one stream of
 12 whistle events is one source and two streams are two (log 2 = 0.69 in
 favour of two streams), and a search will compare scenes of several same-type
 sources, where log c! grows quickly (log 4! = 3.2). The fix is one
@@ -239,7 +247,10 @@ is the classic test of exactly what C2–C4 add. (B) reuses everything and adds
 the effect of sequence length, which is where the duration-scaled p(n) (D8)
 and the per-event priors act. Start every hypothesis at the true tone
 frequencies and timings, as the paper did [paper App. C.10] and as (a) and
-(b) did. One seed first; seeds are a separate decision after the first map.
+(b) did. Evidence estimates in (b) varied by an SD of 2 to 5 across seeds
+(results/two_notes/seeds/README.md), so any ABA margin under about 10 gets
+seeds 0 to 4 (the `--seed` option, PR #28) before it is read as a preference.
+Larger margins are first run with one seed.
 
 ### C9. Search over structures
 
@@ -336,7 +347,8 @@ No claim about perception beyond those comparisons.
    integrated out (C3 (D)), soft event membership; `Scene.sample` and the
    sampling-scoring test (C7). Reproduces (a) and (b) (PR).
 3. C3 (B): σ and ℓ as latents, with the Table A.2 quartile check; then (a)'s
-   100 Hz first harmonic re-run with them inferred, as a side result (PR).
+   100 Hz first harmonic and (b)'s octave re-run with them inferred, as side
+   results (PR).
 4. C8: ABA enumerative, one stimulus timed, then the map (PR plus results
    page and step log).
 5. C9 + C10: the detector, the rounds, the cleanup moves; run on (b) and ABA
