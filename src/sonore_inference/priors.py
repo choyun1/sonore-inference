@@ -28,8 +28,10 @@ the prior of an event's onset and duration, for when they are inferred.
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 
@@ -66,13 +68,19 @@ def log_prior_level(level_db: torch.Tensor) -> torch.Tensor:
     return torch.where(inside, density, torch.full_like(level_db, -math.inf))
 
 
-def spectrum_distribution(n_harmonics: int, f0: torch.Tensor) -> torch.distributions.MultivariateNormal:
+def spectrum_distribution(
+    n_harmonics: int,
+    f0: torch.Tensor,
+    sigma: float | torch.Tensor = SPECTRUM_SIGMA_DB,
+    lengthscale: float | torch.Tensor = SPECTRUM_LENGTHSCALE_ERB,
+) -> torch.distributions.MultivariateNormal:
     """The GP prior of a harmonic spectrum (dB, one value per harmonic 1..K),
-    with the kernel evaluated at the ERB numbers of the harmonics of ``f0``."""
+    with the kernel evaluated at the ERB numbers of the harmonics of ``f0``.
+    ``sigma`` and ``lengthscale`` default to the Table A.2 medians."""
     numbers = torch.arange(1, n_harmonics + 1, dtype=f0.dtype, device=f0.device)
     erbs = _freq_to_erb(numbers * f0)
     distance = erbs[:, None] - erbs[None, :]
-    covariance = SPECTRUM_SIGMA_DB**2 * torch.exp(-0.5 * (distance / SPECTRUM_LENGTHSCALE_ERB) ** 2)
+    covariance = sigma**2 * torch.exp(-0.5 * (distance / lengthscale) ** 2)
     covariance = covariance + SPECTRUM_JITTER_DB**2 * torch.eye(n_harmonics, dtype=f0.dtype, device=f0.device)
     mean = torch.zeros(n_harmonics, dtype=f0.dtype, device=f0.device)
     return torch.distributions.MultivariateNormal(mean, covariance_matrix=covariance)
@@ -336,6 +344,10 @@ class TrajectoryPrior:
     def trajectory(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
         return mean + deviation
 
+    def with_kernel(self, sigma: torch.Tensor, lengthscale: torch.Tensor) -> TrajectoryPrior:
+        """The same prior with ``sigma`` and ``lengthscale`` replaced, e.g. by latents (design C3 (B))."""
+        return dataclasses.replace(self, sigma=sigma, lengthscale=lengthscale)
+
     def log_prior(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
         """Log density of the mean (uniform) and the deviations (the Gaussian process)."""
         low, high = self.mean_range
@@ -357,4 +369,144 @@ WHISTLE_LEVEL_TRAJECTORY = TrajectoryPrior(
 )
 HARMONIC_LEVEL_TRAJECTORY = TrajectoryPrior(
     sigma=7.8, lengthscale=0.18, beta=3.12, epsilon=0.5, mean_range=LEVEL_RANGE_DB
+)
+
+
+def softplus(x: torch.Tensor) -> torch.Tensor:
+    return torch.nn.functional.softplus(x)
+
+
+def inverse_softplus(y: float) -> float:
+    """x with softplus(x) = y, for y > 0."""
+    return y + math.log(-math.expm1(-y))
+
+
+class TruncatedNormal(torch.distributions.Distribution):
+    """Normal(loc, scale) restricted to [low, high] and renormalized; -inf outside."""
+
+    arg_constraints: ClassVar[dict] = {}
+    has_rsample = False
+
+    def __init__(self, loc: float, scale: float, low: float, high: float, dtype=torch.float64):
+        self.normal = torch.distributions.Normal(
+            torch.tensor(loc, dtype=dtype), torch.tensor(scale, dtype=dtype), validate_args=False
+        )
+        self.bounds = (low, high)
+        self.cdf_bounds = (
+            self.normal.cdf(torch.tensor(low, dtype=dtype)),
+            self.normal.cdf(torch.tensor(high, dtype=dtype)),
+        )
+        self.log_mass = torch.log(self.cdf_bounds[1] - self.cdf_bounds[0])
+        super().__init__(validate_args=False)
+
+    @property
+    def support(self):
+        return torch.distributions.constraints.interval(*self.bounds)
+
+    def log_prob(self, value: torch.Tensor) -> torch.Tensor:
+        low, high = self.bounds
+        inside = (value >= low) & (value <= high)
+        density = self.normal.log_prob(value) - self.log_mass
+        return torch.where(inside, density, torch.full_like(density, -math.inf))
+
+    def sample(self, sample_shape=()) -> torch.Tensor:
+        low, high = self.cdf_bounds
+        u = low + (high - low) * torch.rand(torch.Size(sample_shape), dtype=low.dtype)
+        return self.normal.icdf(u)
+
+
+@dataclass(frozen=True)
+class KernelParameterPrior:
+    """Prior of one GP kernel parameter (a sigma or a lengthscale) [App. A.2-A.3, Table A.2].
+
+    The inverse softplus of the parameter (``raw``) is normal, truncated so
+    the parameter stays within ``bounds``. Table A.2 gives two numbers per
+    parameter; the first is the normal's mean and the second, ``raw_scale``,
+    is read as the inverse softplus of its SD. That reading is checked
+    against the table's quartiles by ``tools/table_a2_quartiles.py``: it
+    reproduces them to about their printed precision, where reading the
+    second number as the SD itself does not (whistle level sigma and
+    lengthscale, noise level sigma).
+
+    The latent is not ``raw`` but ``free``, which maps onto ``raw``'s
+    interval through a scaled logistic, so every real value is inside the
+    bounds. A Gaussian fitted to the posterior (Laplace, variational) then
+    never puts mass where the prior is zero. :meth:`distribution` is the
+    prior of ``free``, the truncated normal times the Jacobian.
+    """
+
+    loc: float
+    raw_scale: float
+    bounds: tuple[float, float]
+
+    @property
+    def raw_bounds(self) -> tuple[float, float]:
+        return inverse_softplus(self.bounds[0]), inverse_softplus(self.bounds[1])
+
+    def raw_distribution(self, dtype=torch.float64) -> TruncatedNormal:
+        scale = float(softplus(torch.tensor(self.raw_scale, dtype=torch.float64)))
+        return TruncatedNormal(self.loc, scale, *self.raw_bounds, dtype)
+
+    def distribution(self, dtype=torch.float64) -> LogisticReparametrized:
+        return LogisticReparametrized(self.raw_distribution(dtype))
+
+    def value(self, free: torch.Tensor) -> torch.Tensor:
+        """The parameter itself, from the latent."""
+        low, high = self.raw_bounds
+        return softplus(low + (high - low) * torch.sigmoid(free))
+
+    def free(self, value: float) -> float:
+        """The latent that gives ``value``."""
+        low, high = self.raw_bounds
+        fraction = (inverse_softplus(value) - low) / (high - low)
+        return math.log(fraction / (1 - fraction))
+
+
+class LogisticReparametrized(torch.distributions.Distribution):
+    """The distribution of ``v`` when ``low + (high - low) * sigmoid(v)`` follows
+    ``base``, a distribution on the interval [low, high] (``base.bounds``)."""
+
+    arg_constraints: ClassVar[dict] = {}
+    support = torch.distributions.constraints.real
+    has_rsample = False
+
+    def __init__(self, base: TruncatedNormal):
+        self.base = base
+        super().__init__(validate_args=False)
+
+    def log_prob(self, value: torch.Tensor) -> torch.Tensor:
+        low, high = self.base.bounds
+        inner = low + (high - low) * torch.sigmoid(value)
+        jacobian = (
+            math.log(high - low)
+            + torch.nn.functional.logsigmoid(value)
+            + torch.nn.functional.logsigmoid(-value)
+        )
+        return self.base.log_prob(inner) + jacobian
+
+    def sample(self, sample_shape=()) -> torch.Tensor:
+        low, high = self.base.bounds
+        fraction = (self.base.sample(sample_shape) - low) / (high - low)
+        return torch.logit(fraction)
+
+
+# Table A.2 for whistles and harmonic sources. One departure: the f0
+# lengthscale's lower bound is 0.01 s, not the 0.1 s printed, because the
+# table's own quartiles (Q2 2.5, Q3 5.5) come out with 0.01 (2.52, 5.52) and
+# not with 0.1 (3.23, 5.96); BASS's config (full_enumerative.yaml) also has 0.01.
+F0_KERNEL = (
+    KernelParameterPrior(5.6, 4.7, (0.1, 33.0)),
+    KernelParameterPrior(2.2, 6.0, (0.01, 10.0)),
+)
+WHISTLE_LEVEL_KERNEL = (
+    KernelParameterPrior(1.0, -0.96, (0.1, 50.0)),
+    KernelParameterPrior(6.9, 0.23, (0.01, 10.0)),
+)
+HARMONIC_LEVEL_KERNEL = (
+    KernelParameterPrior(7.8, 2.2, (0.1, 50.0)),
+    KernelParameterPrior(-1.7, 0.99, (0.01, 10.0)),
+)
+SPECTRUM_KERNEL = (
+    KernelParameterPrior(12.0, 4.6, (0.1, 50.0)),
+    KernelParameterPrior(-0.13, 9.2, (0.1, 33.0)),
 )

@@ -46,11 +46,16 @@ def main():
         "--seed", type=int, default=0, help="seed for the evidence's sampling (fits are deterministic)"
     )
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
+    parser.add_argument(
+        "--infer-kernel",
+        action="store_true",
+        help="infer each GP's sigma and lengthscale instead of fixing them at the medians (design C3 (B))",
+    )
     args = parser.parse_args()
     dtype = torch.float64
     cochleagram = FFTCochleagram()
-    harmonic = Harmonic("h0", len(mh.harmonic_numbers(args.f0)))
-    whistle = Whistle("w0")
+    harmonic = Harmonic("h0", len(mh.harmonic_numbers(args.f0)), infer_kernel=args.infer_kernel)
+    whistle = Whistle("w0", infer_kernel=args.infer_kernel)
     one = Scene((harmonic,), TIMING)
     two = Scene((harmonic, whistle), TIMING)
     timing = dict(onset=mh.PADDING, duration=mh.DURATION, dtype=dtype)
@@ -59,6 +64,7 @@ def main():
         f"{args.steps} Adam steps, {args.samples} samples, seed {args.seed}, "
         "fft-bass-gain cochleagram, cosine phases, whistle timing inferred, trajectories, "
         "harmonic timing inferred (through sonore_inference.scene)"
+        + (", GP sigma and lengthscale inferred" if args.infer_kernel else "")
     )
     print(
         f"log prior of structure: one source {one.structure_log_prior():.2f}, "

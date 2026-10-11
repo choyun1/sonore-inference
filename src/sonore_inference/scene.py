@@ -20,6 +20,12 @@ inferred --whistle-timing inferred``):
 Both infer their onset and log duration under
 :func:`~sonore_inference.priors.log_prior_event_timing`. Parameter names
 are ``"<source name>.<parameter>"``, e.g. ``"h0.f0_mean"``.
+
+The sigma and lengthscale of each Gaussian process are fixed at the
+Table A.2 medians unless a source has ``infer_kernel=True`` (design C3 (B)).
+Then each is a latent too, named e.g. ``"h0.f0_sigma_free"``: the value
+mapped to the whole real line, under the paper's truncated normal prior
+(see :class:`~sonore_inference.priors.KernelParameterPrior`).
 """
 
 from __future__ import annotations
@@ -37,11 +43,18 @@ from sonore_inference.cochleagram import Cochleagram, gaussian_log_likelihood
 from sonore_inference.evidence import Evidence, VariationalEvidence, log_evidence, variational_evidence
 from sonore_inference.fit import FitResult, fit
 from sonore_inference.priors import (
+    F0_KERNEL,
     F0_TRAJECTORY,
     GRID_STEP,
+    HARMONIC_LEVEL_KERNEL,
     HARMONIC_LEVEL_TRAJECTORY,
+    SPECTRUM_KERNEL,
+    SPECTRUM_LENGTHSCALE_ERB,
+    SPECTRUM_SIGMA_DB,
+    WHISTLE_LEVEL_KERNEL,
     WHISTLE_LEVEL_TRAJECTORY,
     BoundedUniform,
+    KernelParameterPrior,
     NormalGammaMarginal,
     log_duration_distribution,
     log_prior_structure,
@@ -215,17 +228,56 @@ class _Source:
 
     name: str
     n_events: int
+    infer_kernel: bool
     RATES: ClassVar[dict[str, float]]
+    # each Gaussian process: its fixed (sigma, lengthscale), the priors on them, and its prior term
+    KERNELS: ClassVar[dict[str, tuple[tuple[float, float], tuple[KernelParameterPrior, ...], int]]]
+    # step size of a kernel latent (its free coordinate)
+    KERNEL_RATE: ClassVar[float] = 5e-2
 
     def key(self, parameter: str) -> str:
         return f"{self.name}.{parameter}"
 
+    def _kernel_names(self) -> list[str]:
+        if not self.infer_kernel:
+            return []
+        return [f"{gp}_{which}_free" for gp in self.KERNELS for which in ("sigma", "lengthscale")]
+
     def _parameter_names(self) -> list[str]:
         names = [name for name in self.RATES if name != "log_rest"]
-        return names + (["log_rest"] if self.n_events > 1 else [])
+        return names + (["log_rest"] if self.n_events > 1 else []) + self._kernel_names()
 
     def learning_rates(self) -> dict[str, float]:
-        return {self.key(name): self.RATES[name] for name in self._parameter_names()}
+        return {self.key(name): self.RATES.get(name, self.KERNEL_RATE) for name in self._parameter_names()}
+
+    def _kernel_init(self, dtype) -> dict[str, torch.Tensor]:
+        """The kernel latents at the fixed values, so a fit starts where one with them fixed does."""
+        values = {}
+        for name in self._kernel_names():
+            gp, which, _ = name.rsplit("_", 2)
+            index = 0 if which == "sigma" else 1
+            fixed, priors = self.KERNELS[gp][0][index], self.KERNELS[gp][1][index]
+            values[name] = torch.tensor(priors.free(fixed), dtype=dtype)
+        return values
+
+    def _kernel(self, sample: Sample, gp: str, dtype) -> tuple:
+        """The GP's (sigma, lengthscale): fixed, or drawn through ``sample`` when inferred."""
+        fixed, priors, term = self.KERNELS[gp]
+        if not self.infer_kernel:
+            return fixed
+        return tuple(
+            prior.value(sample(self.key(f"{gp}_{which}_free"), prior.distribution(dtype), term))
+            for which, prior in zip(("sigma", "lengthscale"), priors, strict=True)
+        )
+
+    def _trajectory(self, sample: Sample, gp: str, timing: SceneTiming, memberships, dtype):
+        """The GP trajectory's mean and deviations on the grid, through ``sample``."""
+        prior, term = self.TRAJECTORIES[gp], self.KERNELS[gp][2]
+        if self.infer_kernel:
+            prior = prior.with_kernel(*self._kernel(sample, gp, dtype))
+        mean = sample(self.key(f"{gp}_mean"), prior.mean_distribution(dtype), term)
+        gaussian = prior.deviation_distribution(timing.n_grid, memberships, dtype)
+        return mean, sample(self.key(f"{gp}_deviation"), gaussian, term)
 
     def event_times(self, params: Params, timing: SceneTiming) -> tuple[list, list]:
         """Each event's onset and duration [s]."""
@@ -251,7 +303,18 @@ class Harmonic(_Source):
     name: str
     n_harmonics: int
     n_events: int = 1
+    infer_kernel: bool = False
     kind: ClassVar[str] = "harmonic"
+    TRAJECTORIES: ClassVar = {"f0": F0_TRAJECTORY, "level": HARMONIC_LEVEL_TRAJECTORY}
+    KERNELS: ClassVar = {
+        "f0": ((F0_TRAJECTORY.sigma, F0_TRAJECTORY.lengthscale), F0_KERNEL, TERM_FREQUENCY),
+        "level": (
+            (HARMONIC_LEVEL_TRAJECTORY.sigma, HARMONIC_LEVEL_TRAJECTORY.lengthscale),
+            HARMONIC_LEVEL_KERNEL,
+            TERM_LEVEL,
+        ),
+        "spectrum": ((SPECTRUM_SIGMA_DB, SPECTRUM_LENGTHSCALE_ERB), SPECTRUM_KERNEL, TERM_SPECTRUM),
+    }
     # step sizes, in ERB number, dB, seconds and log seconds (those of milestone (a))
     RATES: ClassVar[dict[str, float]] = {
         "f0_mean": 5e-3,
@@ -287,17 +350,21 @@ class Harmonic(_Source):
             f0_mean, f0_deviation = _per_event_deviation(
                 timing, [hz_to_erb(f) for f in _as_list(f0, self.n_events, "f0")], list(onset), dtype
             )
-        values = {
-            "f0_mean": f0_mean,
-            "f0_deviation": f0_deviation,
-            "level_mean": torch.tensor(level_db, dtype=dtype),
-            "level_deviation": torch.zeros(timing.n_grid, dtype=dtype),
-            "spectrum_db": (
-                torch.zeros(self.n_harmonics, dtype=dtype)
-                if spectrum_db is None
-                else torch.as_tensor(spectrum_db, dtype=dtype).clone()
-            ),
-        } | _timing_init(self.n_events, onset, duration, dtype)
+        values = (
+            {
+                "f0_mean": f0_mean,
+                "f0_deviation": f0_deviation,
+                "level_mean": torch.tensor(level_db, dtype=dtype),
+                "level_deviation": torch.zeros(timing.n_grid, dtype=dtype),
+                "spectrum_db": (
+                    torch.zeros(self.n_harmonics, dtype=dtype)
+                    if spectrum_db is None
+                    else torch.as_tensor(spectrum_db, dtype=dtype).clone()
+                ),
+            }
+            | _timing_init(self.n_events, onset, duration, dtype)
+            | self._kernel_init(dtype)
+        )
         return {self.key(name): value for name, value in values.items()}
 
     def f0_erb(self, params: Params) -> torch.Tensor:
@@ -315,25 +382,15 @@ class Harmonic(_Source):
 
     def program(self, sample: Sample, timing: SceneTiming, dtype=torch.float64) -> None:
         """The source's random variables in generative order, through ``sample``."""
-        p = self.key
         onsets, durations = _Events.sample(self, sample, timing, dtype)
         memberships = _Events.memberships(self, timing, onsets, durations, dtype)
-        f0_mean = sample(p("f0_mean"), F0_TRAJECTORY.mean_distribution(dtype), TERM_FREQUENCY)
-        f0_deviation = sample(
-            p("f0_deviation"),
-            F0_TRAJECTORY.deviation_distribution(timing.n_grid, memberships, dtype),
-            TERM_FREQUENCY,
-        )
-        sample(p("level_mean"), HARMONIC_LEVEL_TRAJECTORY.mean_distribution(dtype), TERM_LEVEL)
-        sample(
-            p("level_deviation"),
-            HARMONIC_LEVEL_TRAJECTORY.deviation_distribution(timing.n_grid, memberships, dtype),
-            TERM_LEVEL,
-        )
+        f0_mean, f0_deviation = self._trajectory(sample, "f0", timing, memberships, dtype)
+        self._trajectory(sample, "level", timing, memberships, dtype)
         # at the f0 the source actually has (its trajectory's mean, in ERB number),
         # not the mean of its prior
         f0 = erb_to_hz(F0_TRAJECTORY.trajectory(f0_mean, f0_deviation).mean())
-        sample(p("spectrum_db"), spectrum_distribution(self.n_harmonics, f0), TERM_SPECTRUM)
+        spectrum = spectrum_distribution(self.n_harmonics, f0, *self._kernel(sample, "spectrum", dtype))
+        sample(self.key("spectrum_db"), spectrum, TERM_SPECTRUM)
 
 
 @dataclass(frozen=True)
@@ -342,7 +399,17 @@ class Whistle(_Source):
 
     name: str
     n_events: int = 1
+    infer_kernel: bool = False
     kind: ClassVar[str] = "whistle"
+    TRAJECTORIES: ClassVar = {"freq": F0_TRAJECTORY, "level": WHISTLE_LEVEL_TRAJECTORY}
+    KERNELS: ClassVar = {
+        "freq": ((F0_TRAJECTORY.sigma, F0_TRAJECTORY.lengthscale), F0_KERNEL, TERM_FREQUENCY),
+        "level": (
+            (WHISTLE_LEVEL_TRAJECTORY.sigma, WHISTLE_LEVEL_TRAJECTORY.lengthscale),
+            WHISTLE_LEVEL_KERNEL,
+            TERM_LEVEL,
+        ),
+    }
     RATES: ClassVar[dict[str, float]] = {
         "freq_mean": 5e-3,
         "freq_deviation": 2e-3,
@@ -372,12 +439,16 @@ class Whistle(_Source):
             freq_mean, freq_deviation = _per_event_deviation(
                 timing, [hz_to_erb(f) for f in _as_list(freq, self.n_events, "freq")], list(onset), dtype
             )
-        values = {
-            "freq_mean": freq_mean,
-            "freq_deviation": freq_deviation,
-            "level_mean": torch.tensor(level_db, dtype=dtype),
-            "level_deviation": torch.zeros(timing.n_grid, dtype=dtype),
-        } | _timing_init(self.n_events, onset, duration, dtype)
+        values = (
+            {
+                "freq_mean": freq_mean,
+                "freq_deviation": freq_deviation,
+                "level_mean": torch.tensor(level_db, dtype=dtype),
+                "level_deviation": torch.zeros(timing.n_grid, dtype=dtype),
+            }
+            | _timing_init(self.n_events, onset, duration, dtype)
+            | self._kernel_init(dtype)
+        )
         return {self.key(name): value for name, value in values.items()}
 
     def render(self, params: Params, timing: SceneTiming) -> torch.Tensor:
@@ -388,21 +459,10 @@ class Whistle(_Source):
 
     def program(self, sample: Sample, timing: SceneTiming, dtype=torch.float64) -> None:
         """The source's random variables in generative order, through ``sample``."""
-        p = self.key
         onsets, durations = _Events.sample(self, sample, timing, dtype)
         memberships = _Events.memberships(self, timing, onsets, durations, dtype)
-        sample(p("freq_mean"), F0_TRAJECTORY.mean_distribution(dtype), TERM_FREQUENCY)
-        sample(
-            p("freq_deviation"),
-            F0_TRAJECTORY.deviation_distribution(timing.n_grid, memberships, dtype),
-            TERM_FREQUENCY,
-        )
-        sample(p("level_mean"), WHISTLE_LEVEL_TRAJECTORY.mean_distribution(dtype), TERM_LEVEL)
-        sample(
-            p("level_deviation"),
-            WHISTLE_LEVEL_TRAJECTORY.deviation_distribution(timing.n_grid, memberships, dtype),
-            TERM_LEVEL,
-        )
+        self._trajectory(sample, "freq", timing, memberships, dtype)
+        self._trajectory(sample, "level", timing, memberships, dtype)
 
 
 Source = Harmonic | Whistle
@@ -444,20 +504,25 @@ class Scene:
         )
 
     @classmethod
-    def sample(cls, timing: SceneTiming, seed: int, *, n_harmonics: int = 10) -> tuple[Scene, Params]:
+    def sample(
+        cls, timing: SceneTiming, seed: int, *, n_harmonics: int = 10, infer_kernel: bool = False
+    ) -> tuple[Scene, Params]:
         """A scene and its parameters drawn from the prior, from the same
         distributions that :meth:`log_prior` and :meth:`structure_log_prior` score.
 
         Noise sources are not implemented (design C5), so the structure is
         drawn from the prior conditioned on having none. Harmonic sources get
         ``n_harmonics`` harmonics, a simplification: the paper's have every
-        harmonic below the Nyquist frequency.
+        harmonic below the Nyquist frequency. With ``infer_kernel`` the GPs'
+        sigma and lengthscale are drawn too; otherwise they are the medians.
         """
         with torch.random.fork_rng():
             torch.manual_seed(seed)
             structure = sample_structure(timing.total_duration, exclude=("noise",))
             sources = tuple(
-                Harmonic(f"h{i}", n_harmonics, n_events) if kind == "harmonic" else Whistle(f"w{i}", n_events)
+                Harmonic(f"h{i}", n_harmonics, n_events, infer_kernel)
+                if kind == "harmonic"
+                else Whistle(f"w{i}", n_events, infer_kernel)
                 for i, (kind, n_events) in enumerate(structure)
             )
             recorder = _Recorder()

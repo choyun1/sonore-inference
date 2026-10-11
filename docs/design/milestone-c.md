@@ -419,3 +419,32 @@ Each step is one PR; nothing past step 1 starts before Cho accepts this.
 Cho accepted C1 to C10 as recommended. On C7, Cho first asked to keep the
 option of plugging into Pyro later. C7 was revised to add the Pyro-ready
 option (C), and Cho chose it.
+
+## 8. Found while implementing
+
+- **C3 (B), the f0 lengthscale's lower bound.** Table A.2 prints 0.1–10 s.
+  Its own quartiles come out with 0.01 s instead (Q2 2.52 and Q3 5.52
+  against the printed 2.5 and 5.5; with 0.1 s they are 3.23 and 5.96)
+  [measured: `tools/table_a2_quartiles.py`]. BASS's config also has 0.01 s.
+  The code uses 0.01 s.
+- **C3 (B), the second "Dist. param.".** Read as the inverse softplus of
+  the normal's SD, it reproduces Table A.2's quartiles to about their
+  printed precision. Read as the SD itself, it does not for the whistle
+  level's sigma and lengthscale or the noise level's sigma [measured: same
+  script].
+- **C3 (B), the latent's scale.** The first version took the inverse
+  softplus of each sigma and lengthscale as the latent, with the truncated
+  normal's hard bounds. On the 100 Hz first harmonic at 40% mistuning, the
+  one-source fit drove the f0 GP's sigma onto its lower bound (0.1 ERB),
+  and importance sampling from the Laplace approximation drew only points
+  outside the bounds (estimate −inf) [measured]. Whitening the
+  trajectories' deviations as well moved the mode off the bound but left
+  the variational fit far off (log odds −562, then an ELBO 1700 below
+  Laplace) [measured]. The latent is now that inverse softplus mapped onto
+  the whole real line by a scaled logistic, with the Jacobian in its prior,
+  and the deviations are not whitened. On the same one-source fit,
+  Laplace, importance sampling, the ELBO and variational importance
+  sampling then agree within 1.2
+  (−10009.8, −10009.8, −10010.9, −10010.5); with the kernel fixed they are
+  −10012.0, −10016.1, −10016.7 and −10014.9 [measured]. The prior on the
+  parameter itself is unchanged, so the evidence is the same integral.
