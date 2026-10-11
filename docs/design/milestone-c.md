@@ -213,22 +213,58 @@ whether BASS's omission was intended goes on the design v1 §6 list.
 
 ### C7. Where the grammar lives in the code
 
+Cho asked (2026-10-11) to keep the option of plugging into Pyro later.
+
 **Options.**
 
-- **(A) Extend `scene.py`:** each source gets a tuple of events; `Scene`
-  gains `sample(generator)` from the prior, and `log_prior` and
-  `structure_log_prior` cover the new terms.
-- **(B) A probabilistic programming library** (Pyro), where a scene is a
-  traced program and variable structure comes free.
+- **(A) Extend `scene.py` only.** Each source gets a tuple of events, and
+  `Scene` gains `sample(generator)`. `log_prior` and `structure_log_prior`
+  cover the new terms. Priors stay as functions that return log densities.
+- **(B) Pyro as the core.** A scene becomes a Pyro model, and Pyro's traces
+  do the scoring and sampling. Pyro's SVI and guides replace our fit and
+  evidence code.
+- **(C) Pyro-ready, Pyro optional.** As (A), but every prior term is a
+  `torch.distributions` object at a named site, using the names we already
+  have (`"h0.f0_mean"`). `Scene.model()` would issue `pyro.sample` at those
+  sites. Pyro would be imported only there, as an optional install extra like
+  sonore (design D2). Our fit and evidence code keeps calling `log_prob` on
+  the same distribution objects. A test checks that Pyro's trace log density
+  equals `Scene.log_prior`.
 
-**Recommendation: (A).** The evidence code (Laplace, importance sampling,
-variational) is ours and works on named parameter dictionaries, which (A)
-keeps. Pyro would add a dependency and a second way of writing every prior,
-and its strength, automatic guides for variable structure, is not what we
-need: the search fixes the structure first and then fits continuous latents.
-Sampling (`Scene.sample`) is new; it uses the same distributions as scoring
-(D8), and a test checks that the two agree (structure frequencies from many
-samples against `structure_log_prior`).
+**Pros and cons.**
+
+| | (A) scene.py only | (B) Pyro core | (C) Pyro-ready |
+| --- | --- | --- | --- |
+| (a) and (b) reproduce exactly | yes | no; fit and evidence rewritten, so every check must be redone | yes |
+| New dependency | none | Pyro required | Pyro optional |
+| Pyro's inference available later (autoguides, HMC/NUTS, amortized guides) | needs a retrofit of every prior | now | through `Scene.model()`, no retrofit |
+| Our variational evidence (Laplace-whitened coordinates, PR #20) | kept | needs a custom Pyro guide | kept |
+| Sampling and scoring from one definition (D8) | two code paths, tied together by a test | one definition | one definition per prior |
+| Work in (c) | least | most | modest: write each prior as a distribution |
+
+Notes on (C).
+
+- The zero-truncated Poisson for n has no stock distribution class, so it
+  needs a small custom one. Everything else is stock: uniform, Student-t,
+  geometric, categorical, and multivariate normal for the GPs.
+- C6's n! is a fact about the hypothesis, not about any one sample site. A
+  Pyro trace of one labelled scene would therefore differ from
+  `structure_log_prior` by exactly log n!. The test will check for that
+  difference, and the code will say why.
+- With D5, (C) also makes it cheap to measure HMC against our variational
+  fit on one illusion.
+- Checked here (2026-10-11): pyro-ppl 1.9.2 installs from PyPI with Python
+  3.13, and a model with a loop over sources traces and scores. I have not
+  checked Python 3.14, which is what Cho's PC and laptop run.
+
+**Recommendation: (C).** It keeps what (a) and (b) verified and adds no
+required dependency, and Pyro can be plugged in later without rewriting the
+priors. (B) would be worth it only if we wanted Pyro's inference to replace
+ours now. Nothing in (a) or (b) points that way: the bottleneck was rugged
+likelihoods, not missing inference machinery. Sampling (`Scene.sample`, or
+Pyro's trace) uses the same distributions as scoring (D8). A test checks
+that the two agree, comparing structure frequencies from many samples with
+`structure_log_prior`.
 
 ### C8. Test stimuli for the grammar
 
@@ -368,7 +404,8 @@ Each step is one PR; nothing past step 1 starts before Cho accepts this.
 5. **C5** Leave the noise type for later? (recommended: yes)
 6. **C6** Count n! labellings, changing (b)'s log odds slightly?
    (recommended: yes)
-7. **C7** Extend `scene.py` rather than adopt Pyro? (recommended: yes)
+7. **C7** Pyro-ready priors (named `torch.distributions` sites and an optional
+   `Scene.model()`), with Pyro an optional extra? (recommended: yes)
 8. **C8** ABA bistability first, buildup of streaming after? (recommended:
    yes)
 9. **C9** Detector plus residual proposals, the paper's rounds and beam?
