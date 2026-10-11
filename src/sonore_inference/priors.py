@@ -66,26 +66,30 @@ def log_prior_level(level_db: torch.Tensor) -> torch.Tensor:
     return torch.where(inside, density, torch.full_like(level_db, -math.inf))
 
 
-def log_prior_spectrum(spectrum_db: torch.Tensor, f0: torch.Tensor) -> torch.Tensor:
-    """Log density of a harmonic spectrum (dB, one value per harmonic 1..K) under the GP prior.
-
-    The kernel is evaluated at the ERB numbers of the harmonics of ``f0``.
-    """
-    numbers = torch.arange(1, spectrum_db.shape[-1] + 1, dtype=spectrum_db.dtype, device=spectrum_db.device)
+def spectrum_distribution(n_harmonics: int, f0: torch.Tensor) -> torch.distributions.MultivariateNormal:
+    """The GP prior of a harmonic spectrum (dB, one value per harmonic 1..K),
+    with the kernel evaluated at the ERB numbers of the harmonics of ``f0``."""
+    numbers = torch.arange(1, n_harmonics + 1, dtype=f0.dtype, device=f0.device)
     erbs = _freq_to_erb(numbers * f0)
     distance = erbs[:, None] - erbs[None, :]
     covariance = SPECTRUM_SIGMA_DB**2 * torch.exp(-0.5 * (distance / SPECTRUM_LENGTHSCALE_ERB) ** 2)
-    covariance = covariance + SPECTRUM_JITTER_DB**2 * torch.eye(
-        len(numbers), dtype=spectrum_db.dtype, device=spectrum_db.device
-    )
-    mean = torch.zeros_like(spectrum_db)
-    return torch.distributions.MultivariateNormal(mean, covariance_matrix=covariance).log_prob(spectrum_db)
+    covariance = covariance + SPECTRUM_JITTER_DB**2 * torch.eye(n_harmonics, dtype=f0.dtype, device=f0.device)
+    mean = torch.zeros(n_harmonics, dtype=f0.dtype, device=f0.device)
+    return torch.distributions.MultivariateNormal(mean, covariance_matrix=covariance)
 
 
-def log_prior_structure(source_types: list[str], duration: float) -> float:
-    """Log prior of a scene's discrete structure: how many sources, their types, one event each.
+def log_prior_spectrum(spectrum_db: torch.Tensor, f0: torch.Tensor) -> torch.Tensor:
+    """Log density of a harmonic spectrum under :func:`spectrum_distribution`."""
+    f0 = torch.as_tensor(f0, dtype=spectrum_db.dtype, device=spectrum_db.device)
+    return spectrum_distribution(spectrum_db.shape[-1], f0).log_prob(spectrum_db)
 
-    ``source_types`` is the unordered list of types, e.g. ``["harmonic", "whistle"]``.
+
+def log_prior_structure(source_types: list[str], duration: float, n_events: list[int] | None = None) -> float:
+    """Log prior of a scene's discrete structure: how many sources, their types and events.
+
+    ``source_types`` is the unordered list of types, e.g. ``["harmonic", "whistle"]``;
+    ``n_events`` the number of events of each (one each by default), each
+    Geometric(0.5) on 1, 2, ... [Table A.1].
     The number of sources is zero-truncated Poisson(rate * duration). A fitted
     hypothesis is one mode with labelled sources; every permutation of the
     labels is another mode of equal mass that the same hypothesis includes,
@@ -98,11 +102,142 @@ def log_prior_structure(source_types: list[str], duration: float) -> float:
     log_truncation = -math.log1p(-math.exp(-rate))
     log_labellings = math.lgamma(n + 1)
     log_types = -n * math.log(N_SOURCE_TYPES)
-    log_one_event_each = n * math.log(EVENTS_GEOMETRIC_P)
-    return log_poisson + log_truncation + log_labellings + log_types + log_one_event_each
+    extra_events = 0 if n_events is None else sum(n_events) - n
+    log_events = n * math.log(EVENTS_GEOMETRIC_P) + extra_events * math.log1p(-EVENTS_GEOMETRIC_P)
+    return log_poisson + log_truncation + log_labellings + log_types + log_events
+
+
+class ZeroTruncatedPoisson(torch.distributions.Distribution):
+    """The number of sources: Poisson(``rate``) conditioned on at least one (design D8)."""
+
+    arg_constraints = {}
+    support = torch.distributions.constraints.positive_integer
+
+    def __init__(self, rate: float):
+        self.rate = rate
+        super().__init__(validate_args=False)
+
+    def log_prob(self, value: torch.Tensor) -> torch.Tensor:
+        return (
+            value * math.log(self.rate)
+            - self.rate
+            - torch.lgamma(value + 1)
+            - math.log1p(-math.exp(-self.rate))
+        )
+
+    def sample(self, sample_shape=()) -> torch.Tensor:
+        poisson = torch.distributions.Poisson(torch.tensor(float(self.rate)))
+        value = poisson.sample(torch.Size(sample_shape))
+        while (value == 0).any():
+            value = torch.where(value == 0, poisson.sample(torch.Size(sample_shape)), value)
+        return value
+
+
+SOURCE_TYPES = ("noise", "harmonic", "whistle")
+
+
+def sample_structure(duration: float, exclude: tuple[str, ...] = ()) -> list[tuple[str, int]]:
+    """Draw (type, number of events) for each source from the prior that
+    :func:`log_prior_structure` scores, using torch's global random state.
+
+    Types in ``exclude`` are rejected by drawing the whole structure again, so
+    the result is the prior conditioned on not containing them.
+    """
+    n_sources = ZeroTruncatedPoisson(SOURCES_PER_SECOND * duration)
+    types = torch.distributions.Categorical(torch.ones(N_SOURCE_TYPES))
+    # torch's Geometric counts failures before the first success: m - 1
+    events = torch.distributions.Geometric(torch.tensor(EVENTS_GEOMETRIC_P))
+    while True:
+        n = int(n_sources.sample())
+        structure = [(SOURCE_TYPES[int(types.sample())], int(events.sample()) + 1) for _ in range(n)]
+        if not any(kind in exclude for kind, _ in structure):
+            return structure
 
 
 TIMING_NORMAL_GAMMA = dict(mu=-1.0, lam=0.5, alpha=2.5, beta=1.0)
+
+
+class BoundedUniform(torch.distributions.Uniform):
+    """Uniform on [low, high], ends included: log density -log(high - low) inside, -inf outside.
+
+    The same numbers as the priors here have always computed, as a
+    distribution object, so that one definition serves scoring, sampling and
+    Pyro (design C7).
+    """
+
+    def __init__(self, low: float, high: float, dtype=torch.float64):
+        super().__init__(torch.tensor(low, dtype=dtype), torch.tensor(high, dtype=dtype), validate_args=False)
+        self.bounds = (low, high)
+
+    def log_prob(self, value: torch.Tensor) -> torch.Tensor:
+        low, high = self.bounds
+        inside = (value >= low) & (value <= high)
+        return torch.where(
+            inside, torch.full_like(value, -math.log(high - low)), torch.full_like(value, -math.inf)
+        )
+
+
+def log_duration_distribution(dtype=torch.float64) -> torch.distributions.StudentT:
+    """Prior of one event's log duration [log s], or of one rest: the log-normal with
+    the normal-gamma of Table A.1 integrated out, a Student-t (see
+    :func:`log_prior_event_timing`)."""
+    p = TIMING_NORMAL_GAMMA
+    scale = math.sqrt(p["beta"] * (p["lam"] + 1) / (p["alpha"] * p["lam"]))
+    return torch.distributions.StudentT(
+        torch.tensor(2 * p["alpha"], dtype=dtype),
+        torch.tensor(p["mu"], dtype=dtype),
+        torch.tensor(scale, dtype=dtype),
+    )
+
+
+class NormalGammaMarginal(torch.distributions.Distribution):
+    """``k`` values x_i ~ Normal(mu, 1 / tau) that share (mu, tau) ~ NormalGamma(mu0, lam0, alpha0, beta0),
+    with (mu, tau) integrated out in closed form (design C3 (D)).
+
+    This is the prior of one source's log durations, or of its log rests
+    [App. A.2, Eqns A.9-A.10]: they share the source's (mu, lambda), drawn
+    from the normal-gamma of Table A.1. For ``k = 1`` it is the Student-t of
+    :func:`log_duration_distribution`. The density is the conjugate
+    marginal likelihood: with mean m and sum of squares S of the x_i,
+    lam_k = lam0 + k, alpha_k = alpha0 + k / 2 and
+    beta_k = beta0 + S / 2 + lam0 k (m - mu0)^2 / (2 lam_k),
+    log p = lgamma(alpha_k) - lgamma(alpha0) + alpha0 log beta0 - alpha_k log beta_k
+    + log(lam0 / lam_k) / 2 - k log(2 pi) / 2.
+    """
+
+    arg_constraints = {}
+    support = torch.distributions.constraints.real_vector
+
+    def __init__(self, k: int, dtype=torch.float64):
+        self.k = k
+        self.dtype = dtype
+        super().__init__(event_shape=torch.Size([k]), validate_args=False)
+
+    def log_prob(self, value: torch.Tensor) -> torch.Tensor:
+        p, k = TIMING_NORMAL_GAMMA, self.k
+        mean = value.mean(-1)
+        sum_of_squares = ((value - mean[..., None]) ** 2).sum(-1)
+        lam_k = p["lam"] + k
+        alpha_k = p["alpha"] + k / 2
+        beta_k = p["beta"] + sum_of_squares / 2 + p["lam"] * k * (mean - p["mu"]) ** 2 / (2 * lam_k)
+        return (
+            math.lgamma(alpha_k)
+            - math.lgamma(p["alpha"])
+            + p["alpha"] * math.log(p["beta"])
+            - alpha_k * torch.log(beta_k)
+            + 0.5 * math.log(p["lam"] / lam_k)
+            - 0.5 * k * math.log(2 * math.pi)
+        )
+
+    def sample(self, sample_shape=()) -> torch.Tensor:
+        p = TIMING_NORMAL_GAMMA
+        shape = torch.Size(sample_shape)
+        tau = torch.distributions.Gamma(
+            torch.tensor(p["alpha"], dtype=self.dtype), torch.tensor(p["beta"], dtype=self.dtype)
+        ).sample(shape)
+        mu = p["mu"] + torch.randn(shape, dtype=self.dtype) / torch.sqrt(p["lam"] * tau)
+        noise = torch.randn(shape + (self.k,), dtype=self.dtype)
+        return mu[..., None] + noise / torch.sqrt(tau)[..., None]
 
 
 def log_prior_event_timing(
@@ -165,6 +300,38 @@ class TrajectoryPrior:
             n_grid, dtype=dtype
         )
         return torch.linalg.cholesky(covariance)
+
+    def soft_cholesky(self, memberships: torch.Tensor) -> torch.Tensor:
+        """Cholesky factor when the source has several events.
+
+        ``memberships`` has shape ``(n_events, n_grid)``: how much each grid
+        point lies inside each event (the event's gate, between 0 and 1). The
+        within-event term of the kernel [App. A.2, Eqn A.17] is then
+        ``beta^2 sum_j w_j(t1) w_j(t2)`` instead of a hard 0 or 1, so the
+        prior moves smoothly with the events' timing (design C4, a labelled
+        departure from the paper and from BASS's hard mask).
+        """
+        n_grid = memberships.shape[-1]
+        dtype = memberships.dtype
+        t = torch.arange(n_grid, dtype=dtype) * GRID_STEP
+        covariance = self.sigma**2 * torch.exp(-0.5 * ((t[:, None] - t[None, :]) / self.lengthscale) ** 2)
+        covariance = covariance + self.beta**2 * memberships.T @ memberships
+        diagonal = self.epsilon**2 + self.sigma * self.stability
+        covariance = covariance + diagonal * torch.eye(n_grid, dtype=dtype)
+        return torch.linalg.cholesky(covariance)
+
+    def mean_distribution(self, dtype=torch.float64) -> BoundedUniform:
+        return BoundedUniform(*self.mean_range, dtype=dtype)
+
+    def deviation_distribution(
+        self, n_grid: int, memberships: torch.Tensor | None = None, dtype=torch.float64
+    ) -> torch.distributions.MultivariateNormal:
+        """The Gaussian process of the deviations on the grid. With one event
+        (``memberships`` None) the within-event term covers the whole grid,
+        as before: the grid points outside the event are not heard, so they
+        integrate out."""
+        scale_tril = self.cholesky(n_grid, dtype) if memberships is None else self.soft_cholesky(memberships)
+        return torch.distributions.MultivariateNormal(torch.zeros(n_grid, dtype=dtype), scale_tril=scale_tril)
 
     def trajectory(self, mean: torch.Tensor, deviation: torch.Tensor) -> torch.Tensor:
         return mean + deviation
