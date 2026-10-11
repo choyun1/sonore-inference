@@ -145,7 +145,12 @@ def main():
     parser.add_argument(
         "--asynchronies", type=float, nargs="+", default=list(tn.ASYNCHRONIES), help="seconds"
     )
-    parser.add_argument("--controls", action="store_true", help="fit the four one-note controls instead")
+    parser.add_argument(
+        "--controls",
+        type=float,
+        nargs="*",
+        help="fit one-note controls instead (these f0s [Hz], default all four)",
+    )
     parser.add_argument("--only", nargs="+", help="fit only these hypotheses (e.g. one@200 two)")
     parser.add_argument("--steps", type=int, default=300)
     parser.add_argument(
@@ -162,8 +167,8 @@ def main():
         "--sigma", type=float, default=10.0, help="likelihood SD [dB] (BASS's value by default)"
     )
     args = parser.parse_args()
-    if args.controls:
-        conditions = [{"interval": "control", "f0": float(f0)} for f0 in tn.CONTROL_F0S]
+    if args.controls is not None:
+        conditions = [{"interval": "control", "f0": float(f0)} for f0 in (args.controls or tn.CONTROL_F0S)]
     elif args.interval:
         conditions = [{"interval": args.interval, "asynchrony": a} for a in args.asynchronies]
     else:

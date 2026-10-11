@@ -42,6 +42,9 @@ def main():
         default=0,
         help="also estimate the evidence by variational inference with this many steps (extra columns)",
     )
+    parser.add_argument(
+        "--seed", type=int, default=0, help="seed for the evidence's sampling (fits are deterministic)"
+    )
     parser.add_argument("--percents", type=float, nargs="+", default=list(mh.MISTUNING_PERCENTS))
     args = parser.parse_args()
     dtype = torch.float64
@@ -53,8 +56,9 @@ def main():
     timing = dict(onset=mh.PADDING, duration=mh.DURATION, dtype=dtype)
     print(
         f"f0 {args.f0:g} Hz, harmonic {args.harmonic} mistuned; "
-        f"{args.steps} Adam steps, {args.samples} samples, fft-bass-gain cochleagram, cosine phases, "
-        "whistle timing inferred, trajectories, harmonic timing inferred (through sonore_inference.scene)"
+        f"{args.steps} Adam steps, {args.samples} samples, seed {args.seed}, "
+        "fft-bass-gain cochleagram, cosine phases, whistle timing inferred, trajectories, "
+        "harmonic timing inferred (through sonore_inference.scene)"
     )
     print(
         f"log prior of structure: one source {one.structure_log_prior():.2f}, "
@@ -85,7 +89,7 @@ def main():
                 | {"h0.spectrum_db": spectrum}
                 | whistle.initial(TIMING, freq=mistuned_freq, level_db=whistle_db, **timing)
             )
-        generator = torch.Generator().manual_seed(0)
+        generator = torch.Generator().manual_seed(args.seed)
         r1 = evaluate(
             one,
             [base],
