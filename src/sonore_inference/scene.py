@@ -551,15 +551,20 @@ def evaluate(
     generator: torch.Generator | None = None,
     variational_steps: int = 0,
     sigma: float = 10.0,
+    report: Callable[[str], None] | None = None,
 ) -> SceneResult:
     """Fit ``scene`` from each initialization, keep the best mode, and estimate its evidence.
 
     The Laplace and importance-sampling estimates are always made; with
     ``variational_steps``, so is the variational one, from the same mode.
     ``sigma`` is the likelihood's SD [dB] (BASS's value by default).
+    ``report``, if given, receives a message as each stage starts.
     """
-    fits = [
-        fit(
+
+    def fit_one(index, init):
+        if report:
+            report(f"fitting (Adam, {steps} steps) from start {index + 1} of {len(inits)}")
+        return fit(
             scene.render,
             init,
             observed,
@@ -569,8 +574,10 @@ def evaluate(
             sigma=sigma,
             log_prior=scene.log_prior,
         )
-        for init in inits
-    ]
+
+    fits = [fit_one(index, init) for index, init in enumerate(inits)]
+    if report:
+        report(f"Laplace and importance sampling ({n_samples} samples)")
     best = max(fits, key=lambda result: result.log_likelihood)
     evidence = log_evidence(
         scene.log_joint(observed, cochleagram, sigma), best.params, n_samples=n_samples, generator=generator
@@ -582,5 +589,6 @@ def evaluate(
             best.params,
             steps=variational_steps,
             generator=generator,
+            report=report,
         )
     return SceneResult(best, evidence, scene.structure_log_prior(), fits, variational)
