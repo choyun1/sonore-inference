@@ -76,15 +76,16 @@ def harmonic_start(source, f0, onset, duration, levels):
     )
 
 
-def hypotheses(condition):
-    """(label, scene, starts) for every hypothesis fitted to this stimulus."""
+def hypotheses(condition, infer_kernel=False):
+    """(label, scene, starts) for every hypothesis fitted to this stimulus; with
+    ``infer_kernel``, the sources infer their GPs' sigma and lengthscale."""
     levels = components(condition)
     note_list = notes(condition)
     lower_f0, _, lower_onset, lower_duration = note_list[0]
     out = []
     one_f0s = sorted({f0 for f0, *_ in note_list} | {100.0}, reverse=True)
     for f0 in one_f0s:
-        source = Harmonic("h0", len(tn.harmonic_numbers(f0)))
+        source = Harmonic("h0", len(tn.harmonic_numbers(f0)), infer_kernel=infer_kernel)
         start = harmonic_start(source, f0, lower_onset, lower_duration, levels)
         out.append((f"one@{f0:g}", Scene((source,), TIMING), [start]))
     if len(note_list) == 1:
@@ -94,16 +95,16 @@ def hypotheses(condition):
         split = {
             freq: (half[freq] if round(freq / lower_f0) % 2 == 0 else level) for freq, level in levels.items()
         }
-        lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)))
-        upper = Harmonic("h1", len(tn.harmonic_numbers(2 * lower_f0)))
+        lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)), infer_kernel=infer_kernel)
+        upper = Harmonic("h1", len(tn.harmonic_numbers(2 * lower_f0)), infer_kernel=infer_kernel)
         start = harmonic_start(lower, lower_f0, lower_onset, lower_duration, split) | harmonic_start(
             upper, 2 * lower_f0, lower_onset, lower_duration, half
         )
         out.append(("two", Scene((lower, upper), TIMING), [start]))
         return out
     upper_f0, falling, upper_onset, upper_duration = note_list[1]
-    lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)))
-    upper = Harmonic("h1", len(tn.harmonic_numbers(upper_f0)))
+    lower = Harmonic("h0", len(tn.harmonic_numbers(lower_f0)), infer_kernel=infer_kernel)
+    upper = Harmonic("h1", len(tn.harmonic_numbers(upper_f0)), infer_kernel=infer_kernel)
     upper_levels = dict(
         zip(
             [round(n * upper_f0, 2) for n in tn.harmonic_numbers(upper_f0)],
@@ -118,7 +119,7 @@ def hypotheses(condition):
     out.append(("two", Scene((lower, upper), TIMING), [start]))
     unshared = tn.unshared_upper_harmonics(condition["interval"])
     if len(unshared):
-        whistles = [Whistle(f"w{index}") for index in range(len(unshared))]
+        whistles = [Whistle(f"w{index}", infer_kernel=infer_kernel) for index in range(len(unshared))]
         start = harmonic_start(lower, lower_f0, lower_onset, lower_duration, levels)
         for whistle, number in zip(whistles, unshared, strict=True):
             freq = number * upper_f0
@@ -172,6 +173,11 @@ def main():
     parser.add_argument(
         "--sigma", type=float, default=10.0, help="likelihood SD [dB] (BASS's value by default)"
     )
+    parser.add_argument(
+        "--infer-kernel",
+        action="store_true",
+        help="infer each GP's sigma and lengthscale instead of fixing them at the medians (design C3 (B))",
+    )
     args = parser.parse_args()
     if args.controls is not None:
         conditions = [{"interval": "control", "f0": float(f0)} for f0 in (args.controls or tn.CONTROL_F0S)]
@@ -183,6 +189,7 @@ def main():
     print(
         f"{args.steps} Adam steps, {args.samples} samples, sigma {args.sigma:g} dB, seed {args.seed}, "
         "fft-bass-gain cochleagram, trajectories, all timing inferred"
+        + (", GP sigma and lengthscale inferred" if args.infer_kernel else "")
     )
     print(
         "stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored"
@@ -196,7 +203,7 @@ def main():
             sound = tn.two_notes_stimulus(condition["interval"], condition["asynchrony"])
         observed = cochleagram(torch.tensor(sound.data[:, 0], dtype=DTYPE))
         results = {}
-        for hypothesis, scene, starts in hypotheses(condition):
+        for hypothesis, scene, starts in hypotheses(condition, args.infer_kernel):
             if args.only and hypothesis not in args.only:
                 continue
             begin = time.perf_counter()
