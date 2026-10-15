@@ -73,6 +73,29 @@ within 240 ms for the octave (Eqn 2 returns the largest asynchrony).
 The design expected the octave to become two sources with enough
 asynchrony (milestone (b), B5). Up to 240 ms it did not.
 
+## Fits run to convergence (2026-10-15)
+
+The fits above stop after 300 Adam steps. In [C2](C2-aba-streaming.md) that
+left an ABA one-stream fit far from its mode, so all 27 stimuli were rerun
+with each fit continuing until its log joint rose by less than 0.5 over 1000
+steps (at most 15000), seed 0, on the same cloud machine
+(`data/B2/converged/`, summary in `data/B2/converged/summary.txt`;
+`tools/run_seeds.py --seeds 0 --tolerance 0.5`, commit c3a2968).
+
+Every sign is unchanged, and so is every Eqn 2 threshold: 0 ms for the
+tritones and the fifth, none within 240 ms for the octave. Most variational
+log odds move by less than 4, within seed noise ([B4](B4-two-notes-seeds.md)).
+The larger moves:
+
+- 400 Hz control: −26.2 to −12.1, still one source.
+- Harmonic plus whistles against one source at the tritones rise by 4 to 13,
+  most of which is the structure prior's labelling count (decision C6), new
+  since these outputs were made, not the fits.
+- Fifth, whistles against one source at 10 ms: 0.1 to 7.7; the fifth's
+  whistles stay far behind two notes (by 47 to 52).
+
+Milestone (b)'s conclusions do not depend on the 300-step fits.
+
 ## Reproduce
 
 ```

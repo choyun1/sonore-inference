@@ -59,6 +59,33 @@ switch made for (b) does not move (a)'s results. The log odds differ most
 where Laplace was invalid or large (200 Hz harmonic 3 at 50%: importance
 sampling from Laplace +22578, from the variational fit +59).
 
+## Fits run to convergence (2026-10-15)
+
+The fits above stop after 300 Adam steps. In [C2](C2-aba-streaming.md) that
+left an ABA one-stream fit far from its mode, so the same conditions were
+rerun with each fit continuing until its log joint rose by less than 0.5 over
+1000 steps (at most 15000), seed 0, on the same cloud machine, on a 0-30%
+grid in steps of 5 (`data/A7/converged/`, `tools/run_seeds.py --seeds 0
+--tolerance 0.5`, commit c3a2968).
+
+Eqn 2 thresholds (%), Laplace / variational:
+
+| Condition | 300 steps, shared points | Converged, shared points | Converged, 0-30% in 5s |
+| --- | --- | --- | --- |
+| 100 Hz, harmonic 1 | 25.0 / 25.0 | 25.0 / 25.2 | 27.4 / 25.2 |
+| 200 Hz, harmonic 2 | 15.0 / 15.0 | 15.0 / 15.0 | 17.5 / 12.5 |
+| 200 Hz, harmonic 3 | 25.0 / 25.0 | 25.0 / 24.9 | 22.8 / 22.5 |
+| 400 Hz, harmonic 3 | 15.0 / 15.0 | 15.0 / 12.8 | 12.5 / 11.1 |
+
+"Shared points" are the mistunings both runs have: 0, 5, 10, 20 and 30%.
+On them only 400 Hz harmonic 3's variational threshold moves (by 2.2); the
+finer grid moves the others by up to 2.5, the size of its step. Every log
+odds at a shared point has the same sign as with 300 steps. Two values moved
+by more than seed noise: 100 Hz harmonic 1 at 10%, variational −13.9 to
+−28.9 (still one source), and at 25% the variational estimate failed (−inf;
+Laplace −3.9). Milestone (a)'s conclusions do not depend on the 300-step
+fits.
+
 ## Reproduce
 
 ```

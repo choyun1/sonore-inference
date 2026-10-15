@@ -1,0 +1,10 @@
+15000 Adam steps at most, stopping at a rise under 0.5 over 1000, 128 samples, sigma 10 dB, seed 0, fft-bass-gain cochleagram, trajectories, all timing inferred
+stimulus  hypothesis  n_params  structure  laplace  importance  ess  floored  log_joint_at_mode  seconds  elbo  vi_importance  vi_ess
+octave 160 ms                       one@400      112    -2.05   -11013.5   -11006.8     2    0   -10962.5    250.6   -10993.9   -10991.1    12
+octave 160 ms                       one@200      118    -2.05    -9978.1    -9979.2     6    0    -9923.7    268.8    -9978.6    -9978.0     3
+octave 160 ms                       one@100      130    -2.05   -10147.6   -10151.7     3    0   -10102.2    490.3   -10152.4   -10153.3     2
+octave 160 ms                       two          230    -4.54    -9979.4    -9996.9     1    0    -9906.3    463.4   -10001.9    -9999.6     3
+octave 160 ms                       log odds vs best one (laplace): two -3.8
+octave 160 ms                       log odds vs best one (importance): two -20.1
+octave 160 ms                       log odds vs best one (elbo): two -25.8
+octave 160 ms                       log odds vs best one (variational): two -24.1

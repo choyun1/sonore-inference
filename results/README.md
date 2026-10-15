@@ -167,7 +167,11 @@ or changes how the model compares with listeners.
 
 One check is of our own inference, not of the paper: milestones (a) and (b)
 fitted each hypothesis with 300 Adam steps, which in C2 left the one-stream
-fit far from its mode. They have not yet been rerun to convergence.
+fit far from its mode. Rerun with fits to convergence (2026-10-15), every
+sign and every threshold on the shared grid is unchanged, except 400 Hz
+harmonic 3's variational threshold (15.0 to 12.8%); see
+[A7](A7-variational-evidence.md#fits-run-to-convergence-2026-10-15) and
+[B2](B2-two-notes-variational.md#fits-run-to-convergence-2026-10-15).
 
 ## Milestone (a) at a glance
 
