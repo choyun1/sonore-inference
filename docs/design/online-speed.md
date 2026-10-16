@@ -12,7 +12,7 @@ All six accepted by Cho on 2026-10-15. The options and reasons are in §2.
 | Decision | Accepted |
 |---|---|
 | S1. Render each event over its own span | Yes: exact, no approximation; first |
-| S2. Take the evidence less often than the fit | Every 0.5 s and at each triplet's end; fit still every 50 ms |
+| S2. Take the evidence less often than the fit | Every 0.5 s and at each triplet's end; fit still every 50 ms. **Outcome:** passed S6 at 8 and 4 st, six to eight times faster (results/O2); default of `online_buildup.py` since 2026-10-16 |
 | S3. Fewer optimizer steps per window | L-BFGS on the free latents, Adam kept as the default until it is shown equal. **Outcome:** tried in two forms, failed S6, dropped (results/O2); (C) and (D) remain |
 | S4. Evaluate only the recent sound | The past summarized by a Gaussian in the whole-sound latents; after S1 to S3 are measured |
 | S5. Hardware | Measure the PC's GPU; float64 throughout until float32 is shown safe |

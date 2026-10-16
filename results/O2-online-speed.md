@@ -4,7 +4,7 @@
 > results. The work was done with AI assistance (Claude) and has not yet been
 > checked carefully. Numbers, methods and interpretations may change.
 
-**Status:** S1 and S2 checked (2026-10-15); S3 tried in two forms, both failed its check, dropped.
+**Status:** S1 and S2 checked (2026-10-15), S2 the online tool's default since 2026-10-16 (Cho); S3 tried in two forms, both failed its check, dropped.
 **Paper target:** none; this is about cost, checked against
 [O1](O1-online-buildup.md). **Code:** `src/sonore_infer/sources.py`
 (`trajectory_event`), `src/sonore_infer/online.py` (`run_online`),
@@ -29,7 +29,8 @@ their tone. One seed, the cloud CPU (4 threads), as O1.
   so far. The waveform and gradients equal the old ones to rounding, which
   a test checks (`tests/test_sources_and_fit.py`); it is on by default.
 - **S2**: the fit still every 50 ms, the Laplace evidence only every 0.5 s
-  and at each triplet's end (`--evidence-every 0.5`); opt-in.
+  and at each triplet's end (`--evidence-every 0.5`), opt-in when these runs were made and
+  the default of `online_buildup.py` since 2026-10-16.
 - **S3**: each window fitted by L-BFGS instead of Adam, in two forms, both
   since removed from the code (branch history, commits 5e93e86 to
   the one before this page's): plain L-BFGS stopping once it gains less
@@ -142,5 +143,4 @@ matters, and it halves the floor), and S4.
 
 ## What is open
 
-- S2 as the default, now that it passed at 8 and 4 semitones.
 - S3 (D), 100 ms windows, S4 and S5, per the design.
